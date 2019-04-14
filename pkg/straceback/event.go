@@ -36,5 +36,5 @@ func eventTimestamp(data *[]byte) uint64 {
 }
 
 func (e Event) String() string {
-	return fmt.Sprintf("%v cpu#%d pid %d [%s] %s(%d)", e.Timestamp, e.CPU, e.Pid, e.Comm, syscallGetName(int(e.ID)), e.ID)
+	return fmt.Sprintf("%v cpu#%d pid %d [%s] %s", e.Timestamp, e.CPU, e.Pid, e.Comm, syscallGetCall(int(e.ID)))
 }

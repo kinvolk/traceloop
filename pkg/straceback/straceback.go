@@ -3,6 +3,7 @@ package straceback
 import (
 	"bytes"
 	"fmt"
+	"time"
 	"unsafe"
 
 	bpflib "github.com/iovisor/gobpf/elf"
@@ -74,6 +75,7 @@ func (sb *StraceBack) AddProg(cgroupPath string, cgroupId uint64) (uint64, error
 	if m == nil {
 		return 0, fmt.Errorf("BPF not supported")
 	}
+	tracelet.tailCallProg = m
 
 	sectionParams := make(map[string]bpflib.SectionParams)
 	sectionParams["maps/events"] = bpflib.SectionParams{PerfRingBufferPageCount: 4}
@@ -126,6 +128,12 @@ func (sb *StraceBack) ShortDumpProg(id uint64) (err error) {
 
 func (sb *StraceBack) DumpProg(id uint64) (err error) {
 	fmt.Printf("Dump:\n")
+
+	err = sb.tracelets[id].tailCallProg.PerfMapStop("events")
+	if err != nil {
+		return err
+	}
+
 	sb.tracelets[id].pm.PollStart()
 	//sb.tracelets[id].pm.PollStop()
 	for {
@@ -141,7 +149,7 @@ func (sb *StraceBack) DumpProg(id uint64) (err error) {
 				fmt.Printf("eventChan not ok\n")
 				return // see explanation above
 			}
-			fmt.Printf("event: %v\n", eventToGo(&data).String())
+			fmt.Printf("%s\n", eventToGo(&data).String())
 		case lost, ok := <-sb.tracelets[id].lostChan:
 			if !ok {
 				fmt.Printf("lostChan not ok\n")
@@ -151,6 +159,8 @@ func (sb *StraceBack) DumpProg(id uint64) (err error) {
 			//default:
 			//	fmt.Printf("default\n")
 			//	return
+		case <-time.After(100 * time.Millisecond):
+			return
 		}
 	}
 	return

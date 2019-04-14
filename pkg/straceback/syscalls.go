@@ -19,23 +19,21 @@ type Param struct {
 }
 
 type Syscall struct {
-	Name    string
-	RawName string
-	Params  []Param
+	Name   string
+	Params []Param
 }
 
 var (
 	syscallNames map[int]string
-	cSyscalls    []Syscall
+	cSyscalls    map[string]Syscall
 )
 
 func init() {
-	cSyscalls_, err := gatherSyscalls()
+	err := gatherSyscalls()
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		os.Exit(1)
 	}
-	cSyscalls = cSyscalls_
 	fmt.Printf("List of syscalls loaded.\n")
 }
 
@@ -128,15 +126,13 @@ func parseSyscall(name, format string) (*Syscall, error) {
 	}
 
 	return &Syscall{
-		Name:    fmt.Sprintf("%s", name),
-		RawName: name,
-		Params:  cParams,
+		Name:   name,
+		Params: cParams,
 	}, nil
 }
 
-func gatherSyscalls() ([]Syscall, error) {
-	var cSyscalls []Syscall
-
+func gatherSyscalls() error {
+	cSyscalls = make(map[string]Syscall)
 	err := filepath.Walk(syscallsPath, func(path string, f os.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -174,14 +170,14 @@ func gatherSyscalls() ([]Syscall, error) {
 			return err
 		}
 
-		cSyscalls = append(cSyscalls, *cSyscall)
+		cSyscalls[cSyscall.Name] = *cSyscall
 
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("error walking %q: %v", err)
+		return fmt.Errorf("error walking %q: %v", err)
 	}
-	return cSyscalls, nil
+	return nil
 }
 
 func syscallGetName(nr int) string {
@@ -190,4 +186,21 @@ func syscallGetName(nr int) string {
 		return "unknown"
 	}
 	return name
+}
+
+func syscallGetCall(nr int) string {
+	name, ok := syscallNames[nr]
+	if !ok {
+		return "unknown"
+	}
+
+	ret := name + "("
+	for i, p := range cSyscalls[name].Params {
+		if i != 0 {
+			ret += ", "
+		}
+		ret += p.Name
+	}
+	ret += ")"
+	return ret
 }
