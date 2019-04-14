@@ -113,8 +113,12 @@ func (sb *StraceBack) AddProg(cgroupPath string, cgroupId uint64) (uint64, error
 	return cgroupId, nil
 }
 
-func (sb *StraceBack) ShortDumpProg(id uint64) (err error) {
+func (sb *StraceBack) DumpProgWithQueue(id uint64) (err error) {
 	fmt.Printf("Dump with queue map:\n")
+	if sb.tracelets[id].queueMap == nil {
+		return fmt.Errorf("not implemented")
+	}
+
 	var value uint64
 
 	for err == nil {
@@ -135,7 +139,6 @@ func (sb *StraceBack) DumpProg(id uint64) (err error) {
 	}
 
 	sb.tracelets[id].pm.PollStart()
-	//sb.tracelets[id].pm.PollStop()
 	for {
 		select {
 		case <-sb.stopChan:

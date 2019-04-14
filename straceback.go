@@ -39,7 +39,7 @@ func main() {
 
 	<-sig
 	fmt.Printf("Interrupted!\n")
-	_ = t.ShortDumpProg(id)
+	_ = t.DumpProgWithQueue(id)
 	err = t.DumpProg(id)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)

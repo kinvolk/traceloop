@@ -19,6 +19,8 @@
 #include <net/inet_sock.h>
 #include <net/net_namespace.h>
 
+#define USE_QUEUE_MAP 0
+
 /* This is a key/value store with the keys being the cpu number
  * and the values being a perf file descriptor.
  */
@@ -31,6 +33,7 @@ struct bpf_map_def SEC("maps/events") events = {
 	.namespace = "",
 };
 
+#if USE_QUEUE_MAP
 struct bpf_map_def SEC("maps/queue") queue = {
 	.type = BPF_MAP_TYPE_QUEUE,
 	.key_size = 0,
@@ -39,6 +42,7 @@ struct bpf_map_def SEC("maps/queue") queue = {
 	.pinning = 0,
 	.namespace = "",
 };
+#endif
 
 struct sys_enter_args {
 	unsigned short common_type;
@@ -49,7 +53,6 @@ struct sys_enter_args {
 	long id;
 	unsigned long args[6];
 };
-
 
 SEC("tracepoint/raw_syscalls/sys_enter")
 int tracepoint__sys_enter(struct sys_enter_args *ctx)
@@ -71,9 +74,11 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 
 	printt("tailcall: pid %llu NR %lu err=%d\n", pid >> 32, ctx->id, err);
 
+#if USE_QUEUE_MAP
 	u64 nr = ctx->id;
 	err = bpf_map_push_elem(&queue, &nr, BPF_EXIST);
 	printt("tailcall: queue nr %llu err=%d\n", nr, err);
+#endif
 
 	return 0;
 }
