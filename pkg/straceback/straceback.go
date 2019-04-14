@@ -137,7 +137,6 @@ func (sb *StraceBack) AddProg(cgroupPath string) (uint32, error) {
 }
 
 func (sb *StraceBack) DumpProgWithQueue(id uint32) (err error) {
-	fmt.Printf("Dump with queue map:\n")
 	if id >= uint32(C.MaxTracedPrograms) || sb.tracelets[id] == nil {
 		return fmt.Errorf("invalid index")
 	}
@@ -156,15 +155,14 @@ func (sb *StraceBack) DumpProgWithQueue(id uint32) (err error) {
 	return nil
 }
 
-func (sb *StraceBack) DumpProg(id uint32) (err error) {
-	fmt.Printf("Dump:\n")
+func (sb *StraceBack) DumpProg(id uint32) (out string, err error) {
 	if id >= uint32(C.MaxTracedPrograms) || sb.tracelets[id] == nil {
-		return fmt.Errorf("invalid index")
+		return "", fmt.Errorf("invalid index")
 	}
 
 	err = sb.tracelets[id].tailCallProg.PerfMapStop("events")
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	sb.tracelets[id].pm.PollStart()
@@ -181,18 +179,15 @@ func (sb *StraceBack) DumpProg(id uint32) (err error) {
 				fmt.Printf("eventChan not ok\n")
 				return // see explanation above
 			}
-			fmt.Printf("%s\n", eventToGo(&data).String())
+			out += fmt.Sprintf("%s\n", eventToGo(&data).String())
 		case lost, ok := <-sb.tracelets[id].lostChan:
 			if !ok {
 				fmt.Printf("lostChan not ok\n")
 				return // see explanation above
 			}
 			fmt.Printf("lost: %v\n", lost)
-			//default:
-			//	fmt.Printf("default\n")
-			//	return
 		case <-time.After(100 * time.Millisecond):
-			return
+			return out, nil
 		}
 	}
 	return
