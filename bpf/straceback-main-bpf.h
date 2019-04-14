@@ -1,7 +1,6 @@
 #ifndef __STRACEBACK_MAIN_BPF_H
 #define __STRACEBACK_MAIN_BPF_H
 
-#include <linux/types.h>
-
+#define MAX_TRACED_PROGRAMS 8
 
 #endif

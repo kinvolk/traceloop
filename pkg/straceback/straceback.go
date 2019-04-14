@@ -9,6 +9,13 @@ import (
 	bpflib "github.com/iovisor/gobpf/elf"
 )
 
+/*
+#include "../../bpf/straceback-main-bpf.h"
+
+const int MaxTracedPrograms = MAX_TRACED_PROGRAMS;
+*/
+import "C"
+
 type Tracelet struct {
 	tailCallProg *bpflib.Module
 	pm           *bpflib.PerfMap
@@ -21,11 +28,12 @@ type StraceBack struct {
 	mainProg    *bpflib.Module
 	cgroupMap   *bpflib.Map
 	tailCallMap *bpflib.Map
-	tracelets   map[uint64]Tracelet
+	tracelets   []*Tracelet
 	stopChan    chan struct{}
 }
 
 func NewTracer() (*StraceBack, error) {
+	fmt.Printf("max: %d\n", C.MaxTracedPrograms)
 	buf, err := Asset("straceback-main-bpf.o")
 	if err != nil {
 		return nil, fmt.Errorf("couldn't find asset: %s", err)
@@ -55,12 +63,28 @@ func NewTracer() (*StraceBack, error) {
 		mainProg:    m,
 		cgroupMap:   cgroupMap,
 		tailCallMap: tailCallMap,
-		tracelets:   make(map[uint64]Tracelet),
+		tracelets:   make([]*Tracelet, C.MaxTracedPrograms),
 		stopChan:    stopChan,
 	}, nil
 }
 
-func (sb *StraceBack) AddProg(cgroupPath string, cgroupId uint64) (uint64, error) {
+func (sb *StraceBack) AddProg(cgroupPath string) (uint32, error) {
+	cgroupId, err := GetCgroupID(cgroupPath)
+	if err != nil {
+		return 0, err
+	}
+
+	var idx uint32
+	for i := 0; i < int(C.MaxTracedPrograms); i++ {
+		if sb.tracelets[i] == nil {
+			idx = uint32(i)
+			break
+		}
+	}
+	if sb.tracelets[idx] != nil {
+		return 0, fmt.Errorf("too many traced programs")
+	}
+
 	tracelet := Tracelet{}
 	tracelet.eventChan = make(chan []byte)
 	tracelet.lostChan = make(chan uint64)
@@ -89,7 +113,7 @@ func (sb *StraceBack) AddProg(cgroupPath string, cgroupId uint64) (uint64, error
 		return 0, fmt.Errorf("error initializing perf map: %v", err)
 	}
 	tracelet.pm = pm
-	sb.tracelets[cgroupId] = tracelet
+	sb.tracelets[idx] = &tracelet
 
 	var fd int = -1
 	for tp := range m.IterTracepointProgram() {
@@ -102,7 +126,6 @@ func (sb *StraceBack) AddProg(cgroupPath string, cgroupId uint64) (uint64, error
 	if fd == -1 {
 		return 0, fmt.Errorf("couldn't find tracepoint fd")
 	}
-	var idx uint32
 	if err := sb.mainProg.UpdateElement(sb.cgroupMap, unsafe.Pointer(&cgroupId), unsafe.Pointer(&idx), 0); err != nil {
 		return 0, fmt.Errorf("error updating tail call map: %v", err)
 	}
@@ -110,11 +133,14 @@ func (sb *StraceBack) AddProg(cgroupPath string, cgroupId uint64) (uint64, error
 		return 0, fmt.Errorf("error updating tail call map: %v", err)
 	}
 
-	return cgroupId, nil
+	return idx, nil
 }
 
-func (sb *StraceBack) DumpProgWithQueue(id uint64) (err error) {
+func (sb *StraceBack) DumpProgWithQueue(id uint32) (err error) {
 	fmt.Printf("Dump with queue map:\n")
+	if id >= uint32(C.MaxTracedPrograms) || sb.tracelets[id] == nil {
+		return fmt.Errorf("invalid index")
+	}
 	if sb.tracelets[id].queueMap == nil {
 		return fmt.Errorf("not implemented")
 	}
@@ -130,8 +156,11 @@ func (sb *StraceBack) DumpProgWithQueue(id uint64) (err error) {
 	return nil
 }
 
-func (sb *StraceBack) DumpProg(id uint64) (err error) {
+func (sb *StraceBack) DumpProg(id uint32) (err error) {
 	fmt.Printf("Dump:\n")
+	if id >= uint32(C.MaxTracedPrograms) || sb.tracelets[id] == nil {
+		return fmt.Errorf("invalid index")
+	}
 
 	err = sb.tracelets[id].tailCallProg.PerfMapStop("events")
 	if err != nil {
@@ -172,7 +201,9 @@ func (sb *StraceBack) DumpProg(id uint64) (err error) {
 func (sb *StraceBack) Stop() {
 	close(sb.stopChan)
 	for i, _ := range sb.tracelets {
-		sb.tracelets[i].pm.PollStop()
+		if sb.tracelets[i] != nil {
+			sb.tracelets[i].pm.PollStop()
+		}
 	}
 	sb.mainProg.Close()
 }

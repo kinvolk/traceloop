@@ -26,7 +26,7 @@ struct bpf_map_def SEC("maps/cgroup_map") cgroup_map = {
 	.type = BPF_MAP_TYPE_HASH,
 	.key_size = sizeof(__u64),
 	.value_size = sizeof(__u32),
-	.max_entries = 8,
+	.max_entries = MAX_TRACED_PROGRAMS,
 	.pinning = 0,
 	.namespace = "",
 };
@@ -38,7 +38,7 @@ struct bpf_map_def SEC("maps/tail_call_map") tail_call_map = {
 	.type = BPF_MAP_TYPE_PROG_ARRAY,
 	.key_size = sizeof(__u32),
 	.value_size = sizeof(__u32),
-	.max_entries = 8,
+	.max_entries = MAX_TRACED_PROGRAMS,
 	.pinning = 0,
 	.namespace = "",
 };
