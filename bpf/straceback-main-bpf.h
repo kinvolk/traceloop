@@ -1,6 +1,6 @@
 #ifndef __STRACEBACK_MAIN_BPF_H
 #define __STRACEBACK_MAIN_BPF_H
 
-#define MAX_TRACED_PROGRAMS 8
+#define MAX_TRACED_PROGRAMS 128
 
 #endif

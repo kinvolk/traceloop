@@ -44,6 +44,10 @@ docker/test:
 		-v /sys/kernel/debug:/sys/kernel/debug \
 		-v /sys/fs/cgroup:/sys/fs/cgroup \
 		$(DOCKER_IMAGE)
+
+docker/push:
+	$(SUDO) docker push $(DOCKER_IMAGE)
+
 lint:
 	./tools/lint -ignorespelling "agre " -ignorespelling "AGRE " .
 	./tools/shell-lint .
