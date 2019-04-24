@@ -54,11 +54,11 @@ struct bpf_map_def SEC("maps/tail_call_exit") tail_call_exit = {
 SEC("tracepoint/raw_syscalls/sys_enter")
 int tracepoint__sys_enter(struct pt_regs *ctx)
 {
-	u64 pid = bpf_get_current_pid_tgid();
+	//u64 pid = bpf_get_current_pid_tgid();
 	u64 cgroupid = bpf_get_current_cgroup_id();
 	u32 *progIdx;
 
-	printt("sys_enter: pid %llu cgr %llu\n", pid >> 32, cgroupid);
+	//printt("sys_enter: pid %llu cgr %llu\n", pid >> 32, cgroupid);
 
 	progIdx = bpf_map_lookup_elem(&cgroup_map, &cgroupid);
 	if (progIdx == NULL)
@@ -72,11 +72,11 @@ int tracepoint__sys_enter(struct pt_regs *ctx)
 SEC("tracepoint/raw_syscalls/sys_exit")
 int tracepoint__sys_exit(struct pt_regs *ctx)
 {
-	u64 pid = bpf_get_current_pid_tgid();
+	//u64 pid = bpf_get_current_pid_tgid();
 	u64 cgroupid = bpf_get_current_cgroup_id();
 	u32 *progIdx;
 
-	printt("sys_exit: pid %llu cgr %llu\n", pid >> 32, cgroupid);
+	//printt("sys_exit: pid %llu cgr %llu\n", pid >> 32, cgroupid);
 
 	progIdx = bpf_map_lookup_elem(&cgroup_map, &cgroupid);
 	if (progIdx == NULL)

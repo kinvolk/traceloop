@@ -37,7 +37,6 @@ type StraceBack struct {
 }
 
 func NewTracer() (*StraceBack, error) {
-	fmt.Printf("max: %d\n", C.MaxTracedPrograms)
 	buf, err := Asset("straceback-main-bpf.o")
 	if err != nil {
 		return nil, fmt.Errorf("couldn't find asset: %s", err)
@@ -149,7 +148,6 @@ func (sb *StraceBack) AddProg(cgroupPath string, description string) (uint32, er
 			fdExit = tp.Fd()
 		}
 	}
-	fmt.Printf("idx %v fd enter %v exit %v\n", idx, fdEnter, fdExit)
 	if fdExit == -1 || fdExit == -1 {
 		return 0, fmt.Errorf("couldn't find tracepoint fd")
 	}
