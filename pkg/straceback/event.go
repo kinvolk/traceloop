@@ -11,11 +11,12 @@ import (
 import "C"
 
 type Event struct {
-	Timestamp uint64 // Monotonic timestamp
-	CPU       uint64 // CPU index
-	Pid       uint64 // Process ID, who triggered the event
-	ID        uint64 // Syscall NR
-	Comm      string // The process command (as in /proc/$pid/comm)
+	Timestamp uint64    // Monotonic timestamp
+	CPU       uint64    // CPU index
+	Pid       uint64    // Process ID, who triggered the event
+	ID        uint64    // Syscall NR
+	Comm      string    // The process command (as in /proc/$pid/comm)
+	Args      [6]uint64 // Syscall args
 }
 
 func eventToGo(data *[]byte) (ret Event) {
@@ -26,6 +27,9 @@ func eventToGo(data *[]byte) (ret Event) {
 	ret.Pid = uint64(eventC.pid & 0xffffffff)
 	ret.ID = uint64(eventC.id)
 	ret.Comm = C.GoString(&eventC.comm[0])
+	for i := 0; i < 6; i++ {
+		ret.Args[i] = uint64(eventC.args[i])
+	}
 
 	return
 }
@@ -36,5 +40,5 @@ func eventTimestamp(data *[]byte) uint64 {
 }
 
 func (e Event) String() string {
-	return fmt.Sprintf("%v cpu#%d pid %d [%s] %s", e.Timestamp, e.CPU, e.Pid, e.Comm, syscallGetCall(int(e.ID)))
+	return fmt.Sprintf("%v cpu#%d pid %d [%s] %s", e.Timestamp, e.CPU, e.Pid, e.Comm, syscallGetCall(int(e.ID), e.Args))
 }

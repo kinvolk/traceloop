@@ -13,6 +13,7 @@ struct syscall_event_t {
 	__u64 pid;
 	__u64 id;
 	char comm[TASK_COMM_LEN];
+	__u64 args[6];
 };
 
 #endif

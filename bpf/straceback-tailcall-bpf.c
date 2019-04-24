@@ -57,7 +57,7 @@ struct sys_enter_args {
 SEC("tracepoint/raw_syscalls/sys_enter")
 int tracepoint__sys_enter(struct sys_enter_args *ctx)
 {
-	int err;
+	int i, err;
 	u32 cpu = bpf_get_smp_processor_id();
 	u64 pid = bpf_get_current_pid_tgid();
 	u64 ts = bpf_ktime_get_ns();
@@ -69,6 +69,10 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 	};
 	
 	bpf_get_current_comm(sc.comm, sizeof(sc.comm));
+
+	#pragma clang loop unroll(full)
+	for (i = 0; i< 6; i++)
+		sc.args[i] = ctx->args[i];
 
 	err = bpf_perf_event_output(ctx, &events, cpu, &sc, sizeof(sc));
 
