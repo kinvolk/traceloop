@@ -28,11 +28,12 @@ type Tracelet struct {
 }
 
 type StraceBack struct {
-	mainProg    *bpflib.Module
-	cgroupMap   *bpflib.Map
-	tailCallMap *bpflib.Map
-	tracelets   []*Tracelet
-	stopChan    chan struct{}
+	mainProg      *bpflib.Module
+	cgroupMap     *bpflib.Map
+	tailCallEnter *bpflib.Map
+	tailCallExit  *bpflib.Map
+	tracelets     []*Tracelet
+	stopChan      chan struct{}
 }
 
 func NewTracer() (*StraceBack, error) {
@@ -53,9 +54,14 @@ func NewTracer() (*StraceBack, error) {
 		return nil, err
 	}
 	cgroupMap := m.Map("cgroup_map")
-	tailCallMap := m.Map("tail_call_map")
+	tailCallEnter := m.Map("tail_call_enter")
+	tailCallExit := m.Map("tail_call_exit")
 
 	err = m.EnableTracepoint("tracepoint/raw_syscalls/sys_enter")
+	if err != nil {
+		return nil, err
+	}
+	err = m.EnableTracepoint("tracepoint/raw_syscalls/sys_exit")
 	if err != nil {
 		return nil, err
 	}
@@ -63,11 +69,12 @@ func NewTracer() (*StraceBack, error) {
 	stopChan := make(chan struct{})
 
 	return &StraceBack{
-		mainProg:    m,
-		cgroupMap:   cgroupMap,
-		tailCallMap: tailCallMap,
-		tracelets:   make([]*Tracelet, C.MaxTracedPrograms),
-		stopChan:    stopChan,
+		mainProg:      m,
+		cgroupMap:     cgroupMap,
+		tailCallEnter: tailCallEnter,
+		tailCallExit:  tailCallExit,
+		tracelets:     make([]*Tracelet, C.MaxTracedPrograms),
+		stopChan:      stopChan,
 	}, nil
 }
 
@@ -132,22 +139,28 @@ func (sb *StraceBack) AddProg(cgroupPath string, description string) (uint32, er
 	tracelet.pm = pm
 	sb.tracelets[idx] = &tracelet
 
-	var fd int = -1
+	var fdEnter int = -1
+	var fdExit int = -1
 	for tp := range m.IterTracepointProgram() {
-		fmt.Printf("name: %s\n", tp.Name)
 		if tp.Name == "tracepoint/raw_syscalls/sys_enter" {
-			fd = tp.Fd()
-			break
+			fdEnter = tp.Fd()
+		}
+		if tp.Name == "tracepoint/raw_syscalls/sys_exit" {
+			fdExit = tp.Fd()
 		}
 	}
-	if fd == -1 {
+	fmt.Printf("idx %v fd enter %v exit %v\n", idx, fdEnter, fdExit)
+	if fdExit == -1 || fdExit == -1 {
 		return 0, fmt.Errorf("couldn't find tracepoint fd")
 	}
 	if err := sb.mainProg.UpdateElement(sb.cgroupMap, unsafe.Pointer(&cgroupId), unsafe.Pointer(&idx), 0); err != nil {
 		return 0, fmt.Errorf("error updating tail call map: %v", err)
 	}
-	if err := sb.mainProg.UpdateElement(sb.tailCallMap, unsafe.Pointer(&idx), unsafe.Pointer(&fd), 0); err != nil {
-		return 0, fmt.Errorf("error updating tail call map: %v", err)
+	if err := sb.mainProg.UpdateElement(sb.tailCallEnter, unsafe.Pointer(&idx), unsafe.Pointer(&fdEnter), 0); err != nil {
+		return 0, fmt.Errorf("error updating tail call enter map: %v", err)
+	}
+	if err := sb.mainProg.UpdateElement(sb.tailCallExit, unsafe.Pointer(&idx), unsafe.Pointer(&fdExit), 0); err != nil {
+		return 0, fmt.Errorf("error updating tail call exit map: %v", err)
 	}
 
 	return idx, nil

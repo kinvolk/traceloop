@@ -54,6 +54,16 @@ struct sys_enter_args {
 	unsigned long args[6];
 };
 
+struct sys_exit_args {
+	unsigned short common_type;
+	unsigned char common_flags;
+	unsigned char common_preempt_count;
+	int common_pid;
+
+	long id;
+	unsigned long ret;
+};
+
 SEC("tracepoint/raw_syscalls/sys_enter")
 int tracepoint__sys_enter(struct sys_enter_args *ctx)
 {
@@ -65,9 +75,10 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 		.timestamp = ts,
 		.cpu = cpu,
 		.pid = pid,
+		.typ = SYSCALL_EVENT_TYPE_ENTER,
 		.id = ctx->id,
 	};
-	
+
 	bpf_get_current_comm(sc.comm, sizeof(sc.comm));
 
 	#pragma clang loop unroll(full)
@@ -76,13 +87,36 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 
 	err = bpf_perf_event_output(ctx, &events, cpu, &sc, sizeof(sc));
 
-	printt("tailcall: pid %llu NR %lu err=%d\n", pid >> 32, ctx->id, err);
+	printt("tailcall, enter: pid %llu NR %lu err=%d\n", pid >> 32, ctx->id, err);
 
 #if USE_QUEUE_MAP
 	u64 nr = ctx->id;
 	err = bpf_map_push_elem(&queue, &nr, BPF_EXIST);
-	printt("tailcall: queue nr %llu err=%d\n", nr, err);
+	printt("tailcall, enter: queue nr %llu err=%d\n", nr, err);
 #endif
+
+	return 0;
+}
+
+SEC("tracepoint/raw_syscalls/sys_exit")
+int tracepoint__sys_exit(struct sys_exit_args *ctx)
+{
+	int err;
+	u32 cpu = bpf_get_smp_processor_id();
+	u64 pid = bpf_get_current_pid_tgid();
+	u64 ts = bpf_ktime_get_ns();
+	struct syscall_event_t sc = {
+		.timestamp = ts,
+		.cpu = cpu,
+		.pid = pid,
+		.typ = SYSCALL_EVENT_TYPE_EXIT,
+		.id = ctx->id,
+		.ret = ctx->ret,
+	};
+
+	bpf_get_current_comm(sc.comm, sizeof(sc.comm));
+	err = bpf_perf_event_output(ctx, &events, cpu, &sc, sizeof(sc));
+	printt("tailcall, exit: pid %llu NR %lu err=%d\n", pid >> 32, ctx->id, err);
 
 	return 0;
 }
