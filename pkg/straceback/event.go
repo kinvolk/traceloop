@@ -46,9 +46,9 @@ func eventTimestamp(data *[]byte) uint64 {
 func (e Event) String() string {
 	switch e.Typ {
 	case 0:
-		return fmt.Sprintf("%v cpu#%d pid %d [%s] %s", e.Timestamp, e.CPU, e.Pid, e.Comm, syscallGetCall(int(e.ID), e.Args))
+		return fmt.Sprintf("%v cpu#%d pid %d [%s] %s...", e.Timestamp, e.CPU, e.Pid, e.Comm, syscallGetCall(int(e.ID), e.Args))
 	case 1:
-		return fmt.Sprintf("%v cpu#%d pid %d [%s] -> %d", e.Timestamp, e.CPU, e.Pid, e.Comm, int(e.Ret))
+		return fmt.Sprintf("%v cpu#%d pid %d [%s] ...%s() returns %d", e.Timestamp, e.CPU, e.Pid, e.Comm, syscallGetName(int(e.ID)), int(e.Ret))
 	default:
 		return fmt.Sprintf("%v cpu#%d pid %d [%s] unknown", e.Timestamp, e.CPU, e.Pid, e.Comm)
 	}

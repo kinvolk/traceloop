@@ -183,7 +183,7 @@ func gatherSyscalls() error {
 func syscallGetName(nr int) string {
 	name, ok := syscallNames[nr]
 	if !ok {
-		return "unknown"
+		return fmt.Sprintf("unknown(%d)", nr)
 	}
 	return name
 }
@@ -191,7 +191,7 @@ func syscallGetName(nr int) string {
 func syscallGetCall(nr int, args [6]uint64) string {
 	name, ok := syscallNames[nr]
 	if !ok {
-		return "unknown"
+		return fmt.Sprintf("unknown(%d)", nr)
 	}
 
 	ret := name + "("
