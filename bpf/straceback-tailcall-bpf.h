@@ -11,6 +11,10 @@
 #define __NR_openat 257
 #endif
 
+#ifndef PIN_GLOBAL_NS
+#define PIN_GLOBAL_NS 2
+#endif
+
 #define PARAM_LEN 128
 
 #define SYSCALL_EVENT_TYPE_ENTER 0
@@ -34,6 +38,10 @@ struct syscall_event_cont_t {
 	__u64 typ;
 
 	char param[PARAM_LEN];
+};
+
+struct syscall_def_t {
+	__u64 args_len[6];
 };
 
 #endif

@@ -33,6 +33,15 @@ struct bpf_map_def SEC("maps/events") events = {
 	.namespace = "",
 };
 
+struct bpf_map_def SEC("maps/syscalls") syscalls = {
+	.type = BPF_MAP_TYPE_HASH,
+	.key_size = sizeof(__u64),
+	.value_size = sizeof(struct syscall_def_t),
+	.max_entries = 1024,
+	.pinning = PIN_GLOBAL_NS,
+	.namespace = "straceback",
+};
+
 #if USE_QUEUE_MAP
 struct bpf_map_def SEC("maps/queue") queue = {
 	.type = BPF_MAP_TYPE_QUEUE,
@@ -71,14 +80,15 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 	u32 cpu = bpf_get_smp_processor_id();
 	u64 pid = bpf_get_current_pid_tgid();
 	u64 ts = bpf_ktime_get_ns();
+	u64 nr = ctx->id;
 	struct syscall_event_t sc = {
 		.timestamp = ts,
 		.cpu = cpu,
 		.pid = pid,
 		.typ = SYSCALL_EVENT_TYPE_ENTER,
-		.id = ctx->id,
+		.id = nr,
 	};
-	struct syscall_event_cont_t sc_cont;
+	struct syscall_def_t *syscall_def;
 
 	bpf_get_current_comm(sc.comm, sizeof(sc.comm));
 
@@ -91,16 +101,26 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 	printt("tailcall, enter: pid %llu NR %lu err=%d\n", pid >> 32, ctx->id, err);
 
 #if USE_QUEUE_MAP
-	u64 nr = ctx->id;
 	err = bpf_map_push_elem(&queue, &nr, BPF_EXIST);
 	printt("tailcall, enter: queue nr %llu err=%d\n", nr, err);
 #endif
 
-	if (ctx->id == __NR_openat) {
-		sc_cont.timestamp = ts;
-		sc_cont.typ = SYSCALL_EVENT_TYPE_CONT;
-		bpf_probe_read(sc_cont.param, sizeof(sc_cont.param), (void *)(ctx->args[1]));
-		bpf_perf_event_output(ctx, &events, cpu, &sc_cont, sizeof(sc_cont));
+	syscall_def = bpf_map_lookup_elem(&syscalls, &nr);
+	if (syscall_def == NULL)
+		return 0;
+
+	#pragma clang loop unroll(full)
+	for (i = 0; i< 6; i++) {
+		__u64 arg_len = syscall_def->args_len[i];
+		if (arg_len != 0) {
+			struct syscall_event_cont_t sc_cont = {};
+			sc_cont.timestamp = ts;
+			sc_cont.typ = SYSCALL_EVENT_TYPE_CONT;
+			if (arg_len > sizeof(sc_cont.param))
+				arg_len = sizeof(sc_cont.param);
+			bpf_probe_read(sc_cont.param, arg_len, (void *)(ctx->args[i]));
+			bpf_perf_event_output(ctx, &events, cpu, &sc_cont, sizeof(sc_cont));
+		}
 	}
 
 	return 0;

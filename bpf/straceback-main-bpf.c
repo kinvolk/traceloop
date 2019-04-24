@@ -9,6 +9,7 @@
 #include <linux/bpf.h>
 #include "bpf_helpers.h"
 #include "straceback-main-bpf.h"
+#include "straceback-tailcall-bpf.h"
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wtautological-compare"
@@ -49,6 +50,15 @@ struct bpf_map_def SEC("maps/tail_call_exit") tail_call_exit = {
 	.max_entries = MAX_TRACED_PROGRAMS,
 	.pinning = 0,
 	.namespace = "",
+};
+
+struct bpf_map_def SEC("maps/syscalls") syscalls = {
+	.type = BPF_MAP_TYPE_HASH,
+	.key_size = sizeof(__u64),
+	.value_size = sizeof(struct syscall_def_t),
+	.max_entries = 1024,
+	.pinning = PIN_GLOBAL_NS,
+	.namespace = "straceback",
 };
 
 SEC("tracepoint/raw_syscalls/sys_enter")

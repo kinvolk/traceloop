@@ -207,3 +207,16 @@ func syscallGetCall(nr int, args [6]uint64) string {
 	ret += ")"
 	return ret
 }
+
+func syscallGetDef(nr int) (args [6]uint64) {
+	if syscallNames[nr] == "access" {
+		return [6]uint64{128, 0, 0, 0, 0, 0}
+	}
+	if syscallNames[nr] == "open" {
+		return [6]uint64{128, 0, 0, 0, 0, 0}
+	}
+	if syscallNames[nr] == "openat" {
+		return [6]uint64{0, 128, 0, 0, 0, 0}
+	}
+	return
+}

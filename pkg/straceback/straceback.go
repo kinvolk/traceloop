@@ -32,6 +32,7 @@ type StraceBack struct {
 	cgroupMap     *bpflib.Map
 	tailCallEnter *bpflib.Map
 	tailCallExit  *bpflib.Map
+	syscallsDef   *bpflib.Map
 	tracelets     []*Tracelet
 	stopChan      chan struct{}
 }
@@ -55,6 +56,15 @@ func NewTracer() (*StraceBack, error) {
 	cgroupMap := m.Map("cgroup_map")
 	tailCallEnter := m.Map("tail_call_enter")
 	tailCallExit := m.Map("tail_call_exit")
+	syscallsDef := m.Map("syscalls")
+
+	for i, _ := range syscallNames {
+		var nr uint64 = uint64(i)
+		var def [6]uint64 = syscallGetDef(i)
+		if err := m.UpdateElement(syscallsDef, unsafe.Pointer(&nr), unsafe.Pointer(&def[0]), 0); err != nil {
+			return nil, fmt.Errorf("error updating syscall def map: %v", err)
+		}
+	}
 
 	err = m.EnableTracepoint("tracepoint/raw_syscalls/sys_enter")
 	if err != nil {
@@ -72,6 +82,7 @@ func NewTracer() (*StraceBack, error) {
 		cgroupMap:     cgroupMap,
 		tailCallEnter: tailCallEnter,
 		tailCallExit:  tailCallExit,
+		syscallsDef:   syscallsDef,
 		tracelets:     make([]*Tracelet, C.MaxTracedPrograms),
 		stopChan:      stopChan,
 	}, nil
