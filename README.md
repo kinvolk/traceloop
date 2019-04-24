@@ -6,13 +6,25 @@
 sudo -E ./straceback /sys/fs/cgroup/unified/system.slice/sshd.service
 ```
 
+## With Docker
+
+```
+docker run --rm -v /sys/kernel/debug:/sys/kernel/debug -v /sys/fs/cgroup:/sys/fs/cgroup -v /sys/fs/bpf:/sys/fs/bpf -v /run:/run --privileged kinvolk/straceback
+```
+
 ## With HTTP interface
 
 ```
 sudo -E ./straceback serve
 ...
-sudo curl --unix-socket /run/straceback.socket 'http://localhost/add?cgrouppath=/sys/fs/cgroup/unified/system.slice/sshd.service'
-sudo curl --unix-socket /run/straceback.socket 'http://localhost/dump?id=0'
+
+$sudo curl --unix-socket /run/straceback.socket 'http://localhost/add?name=sshd&cgrouppath=/sys/fs/cgroup/unified/system.slice/sshd.service'
+added as id 0
+$ sudo curl --unix-socket /run/straceback.socket 'http://localhost/list'
+0: [sshd] /sys/fs/cgroup/unified/system.slice/sshd.service
+$ sudo curl --unix-socket /run/straceback.socket 'http://localhost/dump-by-cgroup?cgroup=/sys/fs/cgroup/unified/system.slice/sshd.service'
+...
+
 ```
 
 ## Example of logs

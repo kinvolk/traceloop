@@ -20,8 +20,11 @@ type Tracelet struct {
 	tailCallProg *bpflib.Module
 	pm           *bpflib.PerfMap
 	queueMap     *bpflib.Map
+	cgroupPath   string
+	cgroupId     uint64
 	eventChan    chan []byte
 	lostChan     chan uint64
+	description  string
 }
 
 type StraceBack struct {
@@ -68,7 +71,17 @@ func NewTracer() (*StraceBack, error) {
 	}, nil
 }
 
-func (sb *StraceBack) AddProg(cgroupPath string) (uint32, error) {
+func (sb *StraceBack) List() (out string) {
+	for i := 0; i < int(C.MaxTracedPrograms); i++ {
+		if sb.tracelets[i] == nil {
+			continue
+		}
+		out += fmt.Sprintf("%d: [%s] %s\n", i, sb.tracelets[i].description, sb.tracelets[i].cgroupPath)
+	}
+	return
+}
+
+func (sb *StraceBack) AddProg(cgroupPath string, description string) (uint32, error) {
 	cgroupId, err := GetCgroupID(cgroupPath)
 	if err != nil {
 		return 0, err
@@ -85,9 +98,13 @@ func (sb *StraceBack) AddProg(cgroupPath string) (uint32, error) {
 		return 0, fmt.Errorf("too many traced programs")
 	}
 
-	tracelet := Tracelet{}
-	tracelet.eventChan = make(chan []byte)
-	tracelet.lostChan = make(chan uint64)
+	tracelet := Tracelet{
+		description: description,
+		cgroupPath:  cgroupPath,
+		cgroupId:    cgroupId,
+		eventChan:   make(chan []byte),
+		lostChan:    make(chan uint64),
+	}
 
 	buf, err := Asset("straceback-tailcall-bpf.o")
 	if err != nil {
@@ -155,6 +172,24 @@ func (sb *StraceBack) DumpProgWithQueue(id uint32) (err error) {
 	return nil
 }
 
+func (sb *StraceBack) DumpProgByName(name string) (out string, err error) {
+	for i := 0; i < int(C.MaxTracedPrograms); i++ {
+		if sb.tracelets[i] != nil && sb.tracelets[i].description == name {
+			return sb.DumpProg(uint32(i))
+		}
+	}
+	return "", fmt.Errorf("prog with name %q not found", name)
+}
+
+func (sb *StraceBack) DumpProgByCgroup(cgroupPath string) (out string, err error) {
+	for i := 0; i < int(C.MaxTracedPrograms); i++ {
+		if sb.tracelets[i] != nil && sb.tracelets[i].cgroupPath == cgroupPath {
+			return sb.DumpProg(uint32(i))
+		}
+	}
+	return "", fmt.Errorf("prog with cgroup %q not found", cgroupPath)
+}
+
 func (sb *StraceBack) DumpProg(id uint32) (out string, err error) {
 	if id >= uint32(C.MaxTracedPrograms) || sb.tracelets[id] == nil {
 		return "", fmt.Errorf("invalid index")
@@ -166,6 +201,12 @@ func (sb *StraceBack) DumpProg(id uint32) (out string, err error) {
 	}
 
 	sb.tracelets[id].pm.PollStart()
+	defer func() {
+		sb.tracelets[id].pm.PollStop()
+		sb.tracelets[id].tailCallProg.Close()
+		sb.tracelets[id] = nil
+	}()
+
 	for {
 		select {
 		case <-sb.stopChan:
@@ -190,6 +231,11 @@ func (sb *StraceBack) DumpProg(id uint32) (out string, err error) {
 			return out, nil
 		}
 	}
+	return
+}
+func (sb *StraceBack) CloseProg(id uint32) (err error) {
+	sb.tracelets[id].tailCallProg.Close()
+	sb.tracelets[id] = nil
 	return
 }
 

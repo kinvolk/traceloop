@@ -30,18 +30,42 @@ func main() {
 	}
 
 	if serveHttp {
+		listHandler := func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintf(w, "%s", t.List())
+		}
 		addHandler := func(w http.ResponseWriter, r *http.Request) {
 			cgroupPath := r.FormValue("cgrouppath")
 			if cgroupPath == "" {
 				fmt.Fprintf(w, "parameter cgrouppath missing\n")
 				return
 			}
-			id, err := t.AddProg(cgroupPath)
+			name := r.FormValue("name") // name is optional
+			id, err := t.AddProg(cgroupPath, name)
 			if err != nil {
 				fmt.Fprintf(w, "%v\n", err)
 				return
 			}
 			fmt.Fprintf(w, "added as id %v\n", id)
+		}
+
+		dumpByNameHandler := func(w http.ResponseWriter, r *http.Request) {
+			nameStr := r.FormValue("name")
+			out, err := t.DumpProgByName(nameStr)
+			if err != nil {
+				fmt.Fprintf(w, "%v\n", err)
+				return
+			}
+			fmt.Fprintf(w, "%s", out)
+		}
+
+		dumpByCgroupHandler := func(w http.ResponseWriter, r *http.Request) {
+			cgroupStr := r.FormValue("cgroup")
+			out, err := t.DumpProgByCgroup(cgroupStr)
+			if err != nil {
+				fmt.Fprintf(w, "%v\n", err)
+				return
+			}
+			fmt.Fprintf(w, "%s", out)
 		}
 
 		dumpHandler := func(w http.ResponseWriter, r *http.Request) {
@@ -63,8 +87,31 @@ func main() {
 			fmt.Fprintf(w, "%s", out)
 		}
 
+		closeHandler := func(w http.ResponseWriter, r *http.Request) {
+			idStr := r.FormValue("id")
+			if idStr == "" {
+				fmt.Fprintf(w, "parameter id missing\n")
+				return
+			}
+			id, err := strconv.Atoi(idStr)
+			if err != nil {
+				fmt.Fprintf(w, "%v\n", err)
+				return
+			}
+			err = t.CloseProg(uint32(id))
+			if err != nil {
+				fmt.Fprintf(w, "%v\n", err)
+				return
+			}
+			fmt.Fprintf(w, "closed\n")
+		}
+
+		http.HandleFunc("/list", listHandler)
 		http.HandleFunc("/add", addHandler)
 		http.HandleFunc("/dump", dumpHandler)
+		http.HandleFunc("/dump-by-name", dumpByNameHandler)
+		http.HandleFunc("/dump-by-cgroup", dumpByCgroupHandler)
+		http.HandleFunc("/close", closeHandler)
 		server := http.Server{}
 
 		unixListener, err := net.Listen("unix", "/run/straceback.socket")
@@ -76,7 +123,7 @@ func main() {
 
 	var ids []uint32
 	for _, cgroupPath := range paths {
-		id, err := t.AddProg(cgroupPath)
+		id, err := t.AddProg(cgroupPath, "")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 			os.Exit(1)
