@@ -78,6 +78,7 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 		.typ = SYSCALL_EVENT_TYPE_ENTER,
 		.id = ctx->id,
 	};
+	struct syscall_event_cont_t sc_cont;
 
 	bpf_get_current_comm(sc.comm, sizeof(sc.comm));
 
@@ -94,6 +95,13 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 	err = bpf_map_push_elem(&queue, &nr, BPF_EXIST);
 	printt("tailcall, enter: queue nr %llu err=%d\n", nr, err);
 #endif
+
+	if (ctx->id == __NR_openat) {
+		sc_cont.timestamp = ts;
+		sc_cont.typ = SYSCALL_EVENT_TYPE_CONT;
+		bpf_probe_read(sc_cont.param, sizeof(sc_cont.param), (void *)(ctx->args[1]));
+		bpf_perf_event_output(ctx, &events, cpu, &sc_cont, sizeof(sc_cont));
+	}
 
 	return 0;
 }
