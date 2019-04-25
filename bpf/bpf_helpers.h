@@ -13,6 +13,10 @@ struct bpf_map_def;
 #define BPF_FUNC_get_current_cgroup_id 80
 #endif
 
+#ifndef BPF_FUNC_probe_read_str
+#define BPF_FUNC_probe_read_str 45
+#endif
+
 #ifndef BPF_FUNC_map_push_elem
 #define BPF_FUNC_map_push_elem 87
 #endif
@@ -31,6 +35,8 @@ static int (*bpf_map_delete_elem)(void *map, void *key) =
 	(void *) BPF_FUNC_map_delete_elem;
 static int (*bpf_probe_read)(void *dst, int size, void *unsafe_ptr) =
 	(void *) BPF_FUNC_probe_read;
+static int (*bpf_probe_read_str)(void *dst, int size, void *unsafe_ptr) =
+	(void *) BPF_FUNC_probe_read_str;
 static unsigned long long (*bpf_ktime_get_ns)(void) =
 	(void *) BPF_FUNC_ktime_get_ns;
 static int (*bpf_trace_printk)(const char *fmt, int fmt_size, ...) =

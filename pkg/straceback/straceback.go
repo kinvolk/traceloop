@@ -249,7 +249,7 @@ func (sb *StraceBack) DumpProg(id uint32) (out string, err error) {
 				return // see explanation above
 			}
 			fmt.Printf("lost: %v\n", lost)
-		case <-time.After(100 * time.Millisecond):
+		case <-time.After(500 * time.Millisecond):
 			return out, nil
 		}
 	}

@@ -23,6 +23,10 @@ type Event struct {
 }
 
 func eventToGo(data *[]byte) (ret Event) {
+	if len(*data) < 16 {
+		return
+	}
+
 	eventC := (*C.struct_syscall_event_t)(unsafe.Pointer(&(*data)[0]))
 
 	ret.Timestamp = uint64(eventC.timestamp)
