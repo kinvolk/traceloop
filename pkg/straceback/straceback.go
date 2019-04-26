@@ -3,7 +3,6 @@ package straceback
 import (
 	"bytes"
 	"fmt"
-	"time"
 	"unsafe"
 
 	bpflib "github.com/iovisor/gobpf/elf"
@@ -136,7 +135,10 @@ func (sb *StraceBack) AddProg(cgroupPath string, description string) (uint32, er
 	tracelet.tailCallProg = m
 
 	sectionParams := make(map[string]bpflib.SectionParams)
-	sectionParams["maps/events"] = bpflib.SectionParams{PerfRingBufferPageCount: 4}
+	sectionParams["maps/events"] = bpflib.SectionParams{
+		PerfRingBufferPageCount: 64,
+		PerfRingBufferBackward:  true,
+	}
 	err = m.Load(sectionParams)
 	if err != nil {
 		return 0, err
@@ -146,6 +148,8 @@ func (sb *StraceBack) AddProg(cgroupPath string, description string) (uint32, er
 	if err != nil {
 		return 0, fmt.Errorf("error initializing perf map: %v", err)
 	}
+	pm.SetTimestampFunc(eventTimestamp)
+
 	tracelet.pm = pm
 	sb.tracelets[idx] = &tracelet
 
@@ -222,36 +226,9 @@ func (sb *StraceBack) DumpProg(id uint32) (out string, err error) {
 		return "", err
 	}
 
-	sb.tracelets[id].pm.PollStart()
-	defer func() {
-		sb.tracelets[id].pm.PollStop()
-		sb.tracelets[id].tailCallProg.Close()
-		sb.tracelets[id] = nil
-	}()
-
-	for {
-		select {
-		case <-sb.stopChan:
-			// On stop, stopChan will be closed but the other channels will
-			// also be closed shortly after. The select{} has no priorities,
-			// therefore, the "ok" value must be checked below.
-			fmt.Printf("stopChan\n")
-			return
-		case data, ok := <-sb.tracelets[id].eventChan:
-			if !ok {
-				fmt.Printf("eventChan not ok\n")
-				return // see explanation above
-			}
-			out += fmt.Sprintf("%s\n", eventToGo(&data).String())
-		case lost, ok := <-sb.tracelets[id].lostChan:
-			if !ok {
-				fmt.Printf("lostChan not ok\n")
-				return // see explanation above
-			}
-			fmt.Printf("lost: %v\n", lost)
-		case <-time.After(500 * time.Millisecond):
-			return out, nil
-		}
+	arr := sb.tracelets[id].pm.DumpBackward()
+	for _, e := range arr {
+		out += fmt.Sprintf("%s\n", eventToGo(&e).String())
 	}
 	return
 }

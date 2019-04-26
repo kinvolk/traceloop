@@ -218,5 +218,17 @@ func syscallGetDef(nr int) (args [6]uint64) {
 	if syscallNames[nr] == "openat" {
 		return [6]uint64{0, 128, 0, 0, 0, 0}
 	}
+	if syscallNames[nr] == "mkdir" {
+		return [6]uint64{128, 0, 0, 0, 0, 0}
+	}
+	if syscallNames[nr] == "chdir" {
+		return [6]uint64{128, 0, 0, 0, 0, 0}
+	}
+	if syscallNames[nr] == "stat" {
+		return [6]uint64{128, 0, 0, 0, 0, 0}
+	}
+	if syscallNames[nr] == "lstat" {
+		return [6]uint64{128, 0, 0, 0, 0, 0}
+	}
 	return
 }
