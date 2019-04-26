@@ -227,9 +227,10 @@ func (sb *StraceBack) DumpProg(id uint32) (out string, err error) {
 	}
 
 	arr := sb.tracelets[id].pm.DumpBackward()
-	for _, e := range arr {
-		out += fmt.Sprintf("%s\n", eventToGo(&e).String())
-	}
+	out = eventsToString(eventsToGo(arr))
+	//for _, e := range arr {
+	//	out += fmt.Sprintf("%s\n", eventToGo(&e).String())
+	//}
 	return
 }
 func (sb *StraceBack) CloseProg(id uint32) (err error) {

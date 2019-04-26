@@ -25,12 +25,14 @@ struct syscall_event_t {
 	__u64 timestamp;
 	__u64 typ;
 
-	__u64 cpu;
+	/* how many syscall_event_cont_t messages to expect after */
+	__u16 cont_nr;
+	__u16 cpu;
+	__u32 id;
 	__u64 pid;
-	__u64 id;
 	char comm[TASK_COMM_LEN];
 	__u64 args[6];
-	__u64 ret;
+	/* __u64 ret stored in args[0] */
 };
 
 struct syscall_event_cont_t {

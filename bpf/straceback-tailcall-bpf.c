@@ -83,18 +83,24 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 	u64 nr = ctx->id;
 	struct syscall_event_t sc = {
 		.timestamp = ts,
+		.cont_nr = 0,
 		.cpu = cpu,
 		.pid = pid,
 		.typ = SYSCALL_EVENT_TYPE_ENTER,
 		.id = nr,
 	};
 	struct syscall_def_t *syscall_def;
+	syscall_def = bpf_map_lookup_elem(&syscalls, &nr);
+	if (syscall_def == NULL)
+		return 0;
 
 	bpf_get_current_comm(sc.comm, sizeof(sc.comm));
 
 	#pragma clang loop unroll(full)
-	for (i = 0; i< 6; i++)
+	for (i = 0; i< 6; i++) {
 		sc.args[i] = ctx->args[i];
+		sc.cont_nr += !!syscall_def->args_len[i];
+	}
 
 	err = bpf_perf_event_output(ctx, &events, cpu, &sc, sizeof(sc));
 
@@ -104,10 +110,6 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 	err = bpf_map_push_elem(&queue, &nr, BPF_EXIST);
 	printt("tailcall, enter: queue nr %llu err=%d\n", nr, err);
 #endif
-
-	syscall_def = bpf_map_lookup_elem(&syscalls, &nr);
-	if (syscall_def == NULL)
-		return 0;
 
 	#pragma clang loop unroll(full)
 	for (i = 0; i< 6; i++) {
@@ -139,8 +141,8 @@ int tracepoint__sys_exit(struct sys_exit_args *ctx)
 		.pid = pid,
 		.typ = SYSCALL_EVENT_TYPE_EXIT,
 		.id = ctx->id,
-		.ret = ctx->ret,
 	};
+	sc.args[0] = ctx->ret;
 
 	bpf_get_current_comm(sc.comm, sizeof(sc.comm));
 	err = bpf_perf_event_output(ctx, &events, cpu, &sc, sizeof(sc));

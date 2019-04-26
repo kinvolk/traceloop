@@ -188,7 +188,7 @@ func syscallGetName(nr int) string {
 	return name
 }
 
-func syscallGetCall(nr int, args [6]uint64) string {
+func syscallGetCall(nr int, args [6]uint64, argsStr *[6]*string) string {
 	name, ok := syscallNames[nr]
 	if !ok {
 		return fmt.Sprintf("unknown(%d)", nr)
@@ -202,6 +202,9 @@ func syscallGetCall(nr int, args [6]uint64) string {
 		ret += p.Name
 		if i < 6 {
 			ret += fmt.Sprintf("=%v", args[i])
+			if argsStr != nil && argsStr[i] != nil {
+				ret += fmt.Sprintf(" %q", *(*argsStr)[i])
+			}
 		}
 	}
 	ret += ")"
