@@ -106,12 +106,23 @@ func main() {
 			fmt.Fprintf(w, "closed\n")
 		}
 
+		closeByNameHandler := func(w http.ResponseWriter, r *http.Request) {
+			nameStr := r.FormValue("name")
+			err = t.CloseProgByName(nameStr)
+			if err != nil {
+				fmt.Fprintf(w, "%v\n", err)
+				return
+			}
+			fmt.Fprintf(w, "closed\n")
+		}
+
 		http.HandleFunc("/list", listHandler)
 		http.HandleFunc("/add", addHandler)
 		http.HandleFunc("/dump", dumpHandler)
 		http.HandleFunc("/dump-by-name", dumpByNameHandler)
 		http.HandleFunc("/dump-by-cgroup", dumpByCgroupHandler)
 		http.HandleFunc("/close", closeHandler)
+		http.HandleFunc("/close-by-name", closeByNameHandler)
 		server := http.Server{}
 
 		unixListener, err := net.Listen("unix", "/run/straceback.socket")

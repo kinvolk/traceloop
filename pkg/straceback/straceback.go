@@ -221,21 +221,26 @@ func (sb *StraceBack) DumpProg(id uint32) (out string, err error) {
 		return "", fmt.Errorf("invalid index")
 	}
 
-	err = sb.tracelets[id].tailCallProg.PerfMapStop("events")
-	if err != nil {
-		return "", err
-	}
+	_ = sb.tracelets[id].tailCallProg.PerfMapStop("events")
+	/* ignore error: it might have been stopped already */
 
 	arr := sb.tracelets[id].pm.DumpBackward()
 	out = eventsToString(eventsToGo(arr))
-	//for _, e := range arr {
-	//	out += fmt.Sprintf("%s\n", eventToGo(&e).String())
-	//}
 	return
 }
 func (sb *StraceBack) CloseProg(id uint32) (err error) {
 	sb.tracelets[id].tailCallProg.Close()
 	sb.tracelets[id] = nil
+	return
+}
+
+func (sb *StraceBack) CloseProgByName(name string) (err error) {
+	for i := 0; i < int(C.MaxTracedPrograms); i++ {
+		if sb.tracelets[i] != nil && sb.tracelets[i].description == name {
+			sb.tracelets[i].tailCallProg.Close()
+			sb.tracelets[i] = nil
+		}
+	}
 	return
 }
 
