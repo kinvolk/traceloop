@@ -118,6 +118,7 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 			struct syscall_event_cont_t sc_cont = {};
 			sc_cont.timestamp = ts;
 			sc_cont.typ = SYSCALL_EVENT_TYPE_CONT;
+			sc_cont.index = i;
 			if (arg_len > sizeof(sc_cont.param))
 				arg_len = sizeof(sc_cont.param);
 			bpf_probe_read(sc_cont.param, arg_len, (void *)(ctx->args[i]));

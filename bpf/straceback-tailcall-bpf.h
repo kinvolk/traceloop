@@ -38,6 +38,7 @@ struct syscall_event_t {
 struct syscall_event_cont_t {
 	__u64 timestamp;
 	__u64 typ;
+	__u64 index;
 
 	char param[PARAM_LEN];
 };

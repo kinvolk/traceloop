@@ -21,6 +21,7 @@ type Event struct {
 	Args      [6]uint64 // Syscall args
 	Ret       uint64    // Return value
 	Param     string    // One string parameter
+	ParamIdx  int       // Parameter index
 }
 
 func eventToGo(data *[]byte) (ret Event) {
@@ -36,6 +37,7 @@ func eventToGo(data *[]byte) (ret Event) {
 	switch ret.Typ {
 	case 2: // SYSCALL_EVENT_TYPE_CONT
 		eventContC := (*C.struct_syscall_event_cont_t)(unsafe.Pointer(&(*data)[0]))
+		ret.ParamIdx = int(eventContC.index)
 		ret.Param = C.GoString(&eventContC.param[0])
 
 	default: // SYSCALL_EVENT_TYPE_ENTER / SYSCALL_EVENT_TYPE_EXIT
@@ -64,7 +66,14 @@ func eventsToGo(data [][]byte) (ret []Event) {
 
 func eventTimestamp(data *[]byte) uint64 {
 	eventC := (*C.struct_syscall_event_t)(unsafe.Pointer(&(*data)[0]))
-	return uint64(eventC.timestamp)
+	eventContC := (*C.struct_syscall_event_cont_t)(unsafe.Pointer(&(*data)[0]))
+	ts := uint64(eventC.timestamp)
+	if eventC.typ == 2 {
+		// FIXME: quick hack to sort events...
+		ts += uint64(eventContC.index) + 1
+	}
+
+	return ts
 }
 
 func (e Event) String() string {
@@ -80,16 +89,31 @@ func (e Event) String() string {
 	}
 }
 func eventsToString(events []Event) (ret string) {
-	for i, e := range events {
+	for i := 0; i < len(events); i++ {
+		e := events[i]
 		switch e.Typ {
 		case 0:
 			var argsStr [6]*string
 			if e.Typ == 0 && i+e.ContNr < len(events) {
 				for j := 0; j < e.ContNr; j++ {
-					argsStr[j] = &events[i+1+j].Param
+					param := events[i+1+j].Param
+					paramIdx := events[i+1+j].ParamIdx
+					argsStr[paramIdx] = &param
+				}
+				i += e.ContNr
+			}
+			returnedValue := "..."
+			if e.Typ == 0 && i+1 < len(events) {
+				nextE := events[i+1]
+				if nextE.Typ == 1 && e.Pid == nextE.Pid && e.ID == nextE.ID {
+					returnedValue = fmt.Sprintf(" = %d", nextE.Ret)
+					i++
 				}
 			}
-			ret += fmt.Sprintf("%v cpu#%d pid %d [%s] %d %s...\n", e.Timestamp, e.CPU, e.Pid, e.Comm, e.ContNr, syscallGetCall(int(e.ID), e.Args, &argsStr))
+			ret += fmt.Sprintf("%v cpu#%d pid %d [%s] %s%s\n",
+				e.Timestamp, e.CPU, e.Pid, e.Comm,
+				syscallGetCall(int(e.ID), e.Args, &argsStr),
+				returnedValue)
 		case 1:
 			ret += fmt.Sprintf("%v cpu#%d pid %d [%s] ...%s() = %d\n", e.Timestamp, e.CPU, e.Pid, e.Comm, syscallGetName(int(e.ID)), int(e.Ret))
 		case 2:
