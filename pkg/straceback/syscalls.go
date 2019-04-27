@@ -239,5 +239,11 @@ func syscallGetDef(nr int) (args [6]uint64) {
 	if syscallNames[nr] == "newfstatat" {
 		return [6]uint64{0, 128, 0, 0, 0, 0}
 	}
+	if syscallNames[nr] == "read" {
+		return [6]uint64{0, 128, 0, 0, 0, 0}
+	}
+	if syscallNames[nr] == "write" {
+		return [6]uint64{0, 128, 0, 0, 0, 0}
+	}
 	return
 }
