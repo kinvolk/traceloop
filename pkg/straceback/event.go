@@ -2,6 +2,7 @@ package straceback
 
 import (
 	"fmt"
+	"time"
 	"unsafe"
 )
 
@@ -91,6 +92,8 @@ func (e Event) String() string {
 func eventsToString(events []Event) (ret string) {
 	for i := 0; i < len(events); i++ {
 		e := events[i]
+		ts := time.Unix(0, int64(e.Timestamp-events[0].Timestamp))
+		timeStr := fmt.Sprintf("%02d:%02d.%09d", ts.Minute(), ts.Second(), ts.Nanosecond())
 		switch e.Typ {
 		case 0:
 			var argsStr [6]*string
@@ -111,15 +114,15 @@ func eventsToString(events []Event) (ret string) {
 				}
 			}
 			ret += fmt.Sprintf("%v cpu#%d pid %d [%s] %s%s\n",
-				e.Timestamp, e.CPU, e.Pid, e.Comm,
+				timeStr, e.CPU, e.Pid, e.Comm,
 				syscallGetCall(int(e.ID), e.Args, &argsStr),
 				returnedValue)
 		case 1:
-			ret += fmt.Sprintf("%v cpu#%d pid %d [%s] ...%s() = %d\n", e.Timestamp, e.CPU, e.Pid, e.Comm, syscallGetName(int(e.ID)), int(e.Ret))
+			ret += fmt.Sprintf("%v cpu#%d pid %d [%s] ...%s() = %d\n", timeStr, e.CPU, e.Pid, e.Comm, syscallGetName(int(e.ID)), int(e.Ret))
 		case 2:
-			ret += fmt.Sprintf("%v %q\n", e.Timestamp, e.Param)
+			ret += fmt.Sprintf("%v %q\n", timeStr, e.Param)
 		default:
-			ret += fmt.Sprintf("%v cpu#%d pid %d [%s] unknown (#%d)\n", e.Timestamp, e.CPU, e.Pid, e.Comm, e.Typ)
+			ret += fmt.Sprintf("%v cpu#%d pid %d [%s] unknown (#%d)\n", timeStr, e.CPU, e.Pid, e.Comm, e.Typ)
 		}
 	}
 	return
