@@ -14,6 +14,7 @@ import "C"
 var useNullByteLength uint64 = uint64(C.USE_NULL_BYTE_LENGTH)
 var useRetAsParamLength uint64 = uint64(C.USE_RET_AS_PARAM_LENGTH)
 var useArgIndexAsParamLength uint64 = uint64(C.USE_ARG_INDEX_AS_PARAM_LENGTH)
+var paramProbeAtExitMask uint64 = uint64(C.PARAM_PROBE_AT_EXIT_MASK)
 
 type Event struct {
 	Timestamp uint64    // Monotonic timestamp
@@ -46,7 +47,7 @@ func eventToGo(data *[]byte) (ret Event) {
 		if eventContC.failed != 0 {
 			ret.Param = "(Pointer deref failed!)"
 		} else if uint64(eventContC.length) == useNullByteLength {
-		        eventContC.param[C.PARAM_LENGTH - 1] = 0
+		        // 0 byte at [C.PARAM_LENGTH - 1] is enforced in BPF code
 			ret.Param = C.GoString(&eventContC.param[0])
 		} else {
 			ret.Param = C.GoStringN(&eventContC.param[0], C.int(eventContC.length))

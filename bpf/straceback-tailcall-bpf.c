@@ -135,6 +135,55 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 
 	bpf_map_update_elem(&probe_at_sys_exit, &pid, &remembered, BPF_ANY);
 
+	#pragma clang loop unroll(full)
+	for (i = 0; i < 6; i++) {
+		__u64 arg_len = syscall_def->args_len[i];
+		if (arg_len != 0 && !(arg_len & PARAM_PROBE_AT_EXIT_MASK) && arg_len != USE_RET_AS_PARAM_LENGTH) {
+			bool null_terminated = false;
+			struct syscall_event_cont_t sc_cont = {
+				.timestamp = ts,
+				.typ = SYSCALL_EVENT_TYPE_CONT,
+				.index = i,
+				.failed = false,
+			};
+
+			if (arg_len == USE_NULL_BYTE_LENGTH) {
+				null_terminated = true;
+				arg_len = PARAM_LEN - 1;
+				/* enforce termination */
+				sc_cont.param[arg_len] = '\0';
+			} else if (arg_len >= USE_ARG_INDEX_AS_PARAM_LENGTH) {
+				__u64 idx = arg_len & USE_ARG_INDEX_AS_PARAM_LENGTH_MASK;
+				/* Access args via the previously saved map entry instead of
+				 * the ctx pointer or 'remembered' struct to avoid this verifier
+				 * issue (which does not occur in sys_exit for the same code):
+				 * "variable ctx access var_off=(0x0; 0x38) disallowed"
+				 */
+				struct remembered_args *remembered_ctx_workaround;
+				if (idx < 6) {
+					remembered_ctx_workaround = bpf_map_lookup_elem(&probe_at_sys_exit, &pid);
+					if (remembered_ctx_workaround)
+						arg_len = remembered_ctx_workaround->args[idx];
+					else
+						arg_len = 0;
+				} else
+					arg_len = PARAM_LEN;
+			}
+
+			if (arg_len > sizeof(sc_cont.param))
+				arg_len = sizeof(sc_cont.param);
+			if (null_terminated)
+				sc_cont.length = USE_NULL_BYTE_LENGTH;
+			else
+				sc_cont.length = arg_len;
+
+			if (bpf_probe_read(sc_cont.param, arg_len, (void *)(ctx->args[i]))) {
+				sc_cont.failed = true;
+			}
+			bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc_cont, sizeof(sc_cont));
+		}
+	}
+
 	return 0;
 }
 
@@ -160,13 +209,16 @@ int tracepoint__sys_exit(struct sys_exit_args *ctx)
 	syscall_def = bpf_map_lookup_elem(&syscalls, &nr);
 	if (syscall_def == NULL)
 		return 0;
+	/* no need to cleanup probe_at_sys_exit before returning because
+	 * "syscalls" is never modified between sys_enter and sys_exit
+	 */
 
 	remembered = bpf_map_lookup_elem(&probe_at_sys_exit, &pid);
 	if (remembered) {
 		#pragma clang loop unroll(full)
 		for (i = 0; i < 6; i++) {
 			__u64 arg_len = syscall_def->args_len[i];
-			if (arg_len != 0) {
+			if (arg_len != 0 && (arg_len & PARAM_PROBE_AT_EXIT_MASK)) {
 				bool null_terminated = false;
 				struct syscall_event_cont_t sc_cont = {
 					.timestamp = remembered->timestamp,
@@ -174,17 +226,20 @@ int tracepoint__sys_exit(struct sys_exit_args *ctx)
 					.index = i,
 					.failed = false,
 				};
+				arg_len &= ~PARAM_PROBE_AT_EXIT_MASK;
 
 				if (arg_len == USE_RET_AS_PARAM_LENGTH) {
-					if (ctx->ret == -1LL)
+					if ((signed long) ctx->ret < 0)
 						arg_len = 0;
 					else
 						arg_len = ctx->ret;
 				} else if (arg_len == USE_NULL_BYTE_LENGTH) {
 					null_terminated = true;
-					arg_len = PARAM_LEN;
+					arg_len = PARAM_LEN - 1;
+					/* enforce termination */
+					sc_cont.param[arg_len] = '\0';
 				} else if (arg_len >= USE_ARG_INDEX_AS_PARAM_LENGTH) {
-					__u64 idx = arg_len & 0xf;
+					__u64 idx = arg_len & USE_ARG_INDEX_AS_PARAM_LENGTH_MASK;
 					if (idx < 6)
 						arg_len = remembered->args[idx];
 					else
