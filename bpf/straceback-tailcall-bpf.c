@@ -167,13 +167,40 @@ int tracepoint__sys_exit(struct sys_exit_args *ctx)
 		for (i = 0; i < 6; i++) {
 			__u64 arg_len = syscall_def->args_len[i];
 			if (arg_len != 0) {
-				struct syscall_event_cont_t sc_cont = {};
-				sc_cont.timestamp = remembered->timestamp;
-				sc_cont.typ = SYSCALL_EVENT_TYPE_CONT;
-				sc_cont.index = i;
+				bool null_terminated = false;
+				struct syscall_event_cont_t sc_cont = {
+					.timestamp = remembered->timestamp,
+					.typ = SYSCALL_EVENT_TYPE_CONT,
+					.index = i,
+					.failed = false,
+				};
+
+				if (arg_len == USE_RET_AS_PARAM_LENGTH) {
+					if (ctx->ret == -1LL)
+						arg_len = 0;
+					else
+						arg_len = ctx->ret;
+				} else if (arg_len == USE_NULL_BYTE_LENGTH) {
+					null_terminated = true;
+					arg_len = PARAM_LEN;
+				} else if (arg_len >= USE_ARG_INDEX_AS_PARAM_LENGTH) {
+					__u64 idx = arg_len & 0xf;
+					if (idx < 6)
+						arg_len = remembered->args[idx];
+					else
+						arg_len = PARAM_LEN;
+				}
+
 				if (arg_len > sizeof(sc_cont.param))
 					arg_len = sizeof(sc_cont.param);
-				bpf_probe_read(sc_cont.param, arg_len, (void *)(remembered->args[i]));
+				if (null_terminated)
+					sc_cont.length = USE_NULL_BYTE_LENGTH;
+				else
+					sc_cont.length = arg_len;
+
+				if (bpf_probe_read(sc_cont.param, arg_len, (void *)(remembered->args[i]))) {
+					sc_cont.failed = true;
+				}
 				bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc_cont, sizeof(sc_cont));
 			}
 		}

@@ -11,9 +11,13 @@ import (
 */
 import "C"
 
+var useNullByteLength uint64 = uint64(C.USE_NULL_BYTE_LENGTH)
+var useRetAsParamLength uint64 = uint64(C.USE_RET_AS_PARAM_LENGTH)
+var useArgIndexAsParamLength uint64 = uint64(C.USE_ARG_INDEX_AS_PARAM_LENGTH)
+
 type Event struct {
 	Timestamp uint64    // Monotonic timestamp
-	Typ       int       // Event type: enter=0, exit=1
+	Typ       int       // Event type: enter=0, exit=1, cont=2
 	ContNr    int       // How many continuation messages after
 	CPU       int       // CPU index
 	Pid       uint64    // Process ID, who triggered the event
@@ -39,7 +43,14 @@ func eventToGo(data *[]byte) (ret Event) {
 	case 2: // SYSCALL_EVENT_TYPE_CONT
 		eventContC := (*C.struct_syscall_event_cont_t)(unsafe.Pointer(&(*data)[0]))
 		ret.ParamIdx = int(eventContC.index)
-		ret.Param = C.GoString(&eventContC.param[0])
+		if eventContC.failed != 0 {
+			ret.Param = "(Pointer deref failed!)"
+		} else if uint64(eventContC.length) == useNullByteLength {
+		        eventContC.param[C.PARAM_LENGTH - 1] = 0
+			ret.Param = C.GoString(&eventContC.param[0])
+		} else {
+			ret.Param = C.GoStringN(&eventContC.param[0], C.int(eventContC.length))
+		}
 
 	default: // SYSCALL_EVENT_TYPE_ENTER / SYSCALL_EVENT_TYPE_EXIT
 		ret.ContNr = int(eventC.cont_nr)
