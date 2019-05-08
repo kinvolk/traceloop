@@ -42,6 +42,24 @@ struct bpf_map_def SEC("maps/syscalls") syscalls = {
 	.namespace = "straceback",
 };
 
+struct remembered_args {
+	u64 timestamp;
+	u64 args[6];
+};
+
+/* This key/value store maps thread PIDs to syscall arg arrays
+ * that were remembered at sys_enter so that sys_exit can probe buffer
+ * contents and generate syscall events showing the result content.
+ */
+struct bpf_map_def SEC("maps/probe_at_sys_exit") probe_at_sys_exit = {
+	.type = BPF_MAP_TYPE_HASH,
+	.key_size = sizeof(__u64),
+	.value_size = sizeof(struct remembered_args),
+	.max_entries = 128,
+	.pinning = 0,
+	.namespace = "",
+};
+
 #if USE_QUEUE_MAP
 struct bpf_map_def SEC("maps/queue") queue = {
 	.type = BPF_MAP_TYPE_QUEUE,
@@ -89,6 +107,9 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 		.typ = SYSCALL_EVENT_TYPE_ENTER,
 		.id = nr,
 	};
+	struct remembered_args remembered = {
+		.timestamp = ts,
+	};
 	struct syscall_def_t *syscall_def;
 	syscall_def = bpf_map_lookup_elem(&syscalls, &nr);
 	if (syscall_def == NULL)
@@ -99,10 +120,11 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 	#pragma clang loop unroll(full)
 	for (i = 0; i< 6; i++) {
 		sc.args[i] = ctx->args[i];
+		remembered.args[i] = ctx->args[i];
 		sc.cont_nr += !!syscall_def->args_len[i];
 	}
 
-	err = bpf_perf_event_output(ctx, &events, cpu, &sc, sizeof(sc));
+	err = bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc, sizeof(sc));
 
 	printt("tailcall, enter: pid %llu NR %lu err=%d\n", pid >> 32, ctx->id, err);
 
@@ -111,20 +133,7 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 	printt("tailcall, enter: queue nr %llu err=%d\n", nr, err);
 #endif
 
-	#pragma clang loop unroll(full)
-	for (i = 0; i< 6; i++) {
-		__u64 arg_len = syscall_def->args_len[i];
-		if (arg_len != 0) {
-			struct syscall_event_cont_t sc_cont = {};
-			sc_cont.timestamp = ts;
-			sc_cont.typ = SYSCALL_EVENT_TYPE_CONT;
-			sc_cont.index = i;
-			if (arg_len > sizeof(sc_cont.param))
-				arg_len = sizeof(sc_cont.param);
-			bpf_probe_read(sc_cont.param, arg_len, (void *)(ctx->args[i]));
-			bpf_perf_event_output(ctx, &events, cpu, &sc_cont, sizeof(sc_cont));
-		}
-	}
+	bpf_map_update_elem(&probe_at_sys_exit, &pid, &remembered, BPF_ANY);
 
 	return 0;
 }
@@ -132,21 +141,47 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 SEC("tracepoint/raw_syscalls/sys_exit")
 int tracepoint__sys_exit(struct sys_exit_args *ctx)
 {
-	int err;
+	int i, err;
 	u32 cpu = bpf_get_smp_processor_id();
 	u64 pid = bpf_get_current_pid_tgid();
 	u64 ts = bpf_ktime_get_ns();
+	u64 nr = ctx->id;
+	struct remembered_args *remembered;
+	struct syscall_def_t *syscall_def;
 	struct syscall_event_t sc = {
 		.timestamp = ts,
 		.cpu = cpu,
 		.pid = pid,
 		.typ = SYSCALL_EVENT_TYPE_EXIT,
-		.id = ctx->id,
+		.id = nr,
 	};
 	sc.args[0] = ctx->ret;
 
+	syscall_def = bpf_map_lookup_elem(&syscalls, &nr);
+	if (syscall_def == NULL)
+		return 0;
+
+	remembered = bpf_map_lookup_elem(&probe_at_sys_exit, &pid);
+	if (remembered) {
+		#pragma clang loop unroll(full)
+		for (i = 0; i < 6; i++) {
+			__u64 arg_len = syscall_def->args_len[i];
+			if (arg_len != 0) {
+				struct syscall_event_cont_t sc_cont = {};
+				sc_cont.timestamp = remembered->timestamp;
+				sc_cont.typ = SYSCALL_EVENT_TYPE_CONT;
+				sc_cont.index = i;
+				if (arg_len > sizeof(sc_cont.param))
+					arg_len = sizeof(sc_cont.param);
+				bpf_probe_read(sc_cont.param, arg_len, (void *)(remembered->args[i]));
+				bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc_cont, sizeof(sc_cont));
+			}
+		}
+		bpf_map_delete_elem(&probe_at_sys_exit, &pid);
+	}
+
 	bpf_get_current_comm(sc.comm, sizeof(sc.comm));
-	err = bpf_perf_event_output(ctx, &events, cpu, &sc, sizeof(sc));
+	err = bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc, sizeof(sc));
 	printt("tailcall, exit: pid %llu NR %lu err=%d\n", pid >> 32, ctx->id, err);
 
 	return 0;
