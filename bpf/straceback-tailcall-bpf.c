@@ -42,6 +42,24 @@ struct bpf_map_def SEC("maps/syscalls") syscalls = {
 	.namespace = "straceback",
 };
 
+struct remembered_args {
+	u64 timestamp;
+	u64 args[6];
+};
+
+/* This key/value store maps thread PIDs to syscall arg arrays
+ * that were remembered at sys_enter so that sys_exit can probe buffer
+ * contents and generate syscall events showing the result content.
+ */
+struct bpf_map_def SEC("maps/probe_at_sys_exit") probe_at_sys_exit = {
+	.type = BPF_MAP_TYPE_HASH,
+	.key_size = sizeof(__u64),
+	.value_size = sizeof(struct remembered_args),
+	.max_entries = 128,
+	.pinning = 0,
+	.namespace = "",
+};
+
 #if USE_QUEUE_MAP
 struct bpf_map_def SEC("maps/queue") queue = {
 	.type = BPF_MAP_TYPE_QUEUE,
@@ -89,6 +107,9 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 		.typ = SYSCALL_EVENT_TYPE_ENTER,
 		.id = nr,
 	};
+	struct remembered_args remembered = {
+		.timestamp = ts,
+	};
 	struct syscall_def_t *syscall_def;
 	syscall_def = bpf_map_lookup_elem(&syscalls, &nr);
 	if (syscall_def == NULL)
@@ -99,10 +120,11 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 	#pragma clang loop unroll(full)
 	for (i = 0; i< 6; i++) {
 		sc.args[i] = ctx->args[i];
+		remembered.args[i] = ctx->args[i];
 		sc.cont_nr += !!syscall_def->args_len[i];
 	}
 
-	err = bpf_perf_event_output(ctx, &events, cpu, &sc, sizeof(sc));
+	err = bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc, sizeof(sc));
 
 	printt("tailcall, enter: pid %llu NR %lu err=%d\n", pid >> 32, ctx->id, err);
 
@@ -111,18 +133,54 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 	printt("tailcall, enter: queue nr %llu err=%d\n", nr, err);
 #endif
 
+	bpf_map_update_elem(&probe_at_sys_exit, &pid, &remembered, BPF_ANY);
+
 	#pragma clang loop unroll(full)
-	for (i = 0; i< 6; i++) {
+	for (i = 0; i < 6; i++) {
 		__u64 arg_len = syscall_def->args_len[i];
-		if (arg_len != 0) {
-			struct syscall_event_cont_t sc_cont = {};
-			sc_cont.timestamp = ts;
-			sc_cont.typ = SYSCALL_EVENT_TYPE_CONT;
-			sc_cont.index = i;
+		if (arg_len != 0 && !(arg_len & PARAM_PROBE_AT_EXIT_MASK) && arg_len != USE_RET_AS_PARAM_LENGTH) {
+			bool null_terminated = false;
+			struct syscall_event_cont_t sc_cont = {
+				.timestamp = ts,
+				.typ = SYSCALL_EVENT_TYPE_CONT,
+				.index = i,
+				.failed = false,
+			};
+
+			if (arg_len == USE_NULL_BYTE_LENGTH) {
+				null_terminated = true;
+				arg_len = PARAM_LEN - 1;
+				/* enforce termination */
+				sc_cont.param[arg_len] = '\0';
+			} else if (arg_len >= USE_ARG_INDEX_AS_PARAM_LENGTH) {
+				__u64 idx = arg_len & USE_ARG_INDEX_AS_PARAM_LENGTH_MASK;
+				/* Access args via the previously saved map entry instead of
+				 * the ctx pointer or 'remembered' struct to avoid this verifier
+				 * issue (which does not occur in sys_exit for the same code):
+				 * "variable ctx access var_off=(0x0; 0x38) disallowed"
+				 */
+				struct remembered_args *remembered_ctx_workaround;
+				if (idx < 6) {
+					remembered_ctx_workaround = bpf_map_lookup_elem(&probe_at_sys_exit, &pid);
+					if (remembered_ctx_workaround)
+						arg_len = remembered_ctx_workaround->args[idx];
+					else
+						arg_len = 0;
+				} else
+					arg_len = PARAM_LEN;
+			}
+
 			if (arg_len > sizeof(sc_cont.param))
 				arg_len = sizeof(sc_cont.param);
-			bpf_probe_read(sc_cont.param, arg_len, (void *)(ctx->args[i]));
-			bpf_perf_event_output(ctx, &events, cpu, &sc_cont, sizeof(sc_cont));
+			if (null_terminated)
+				sc_cont.length = USE_NULL_BYTE_LENGTH;
+			else
+				sc_cont.length = arg_len;
+
+			if (bpf_probe_read(sc_cont.param, arg_len, (void *)(ctx->args[i]))) {
+				sc_cont.failed = true;
+			}
+			bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc_cont, sizeof(sc_cont));
 		}
 	}
 
@@ -132,21 +190,80 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 SEC("tracepoint/raw_syscalls/sys_exit")
 int tracepoint__sys_exit(struct sys_exit_args *ctx)
 {
-	int err;
+	int i, err;
 	u32 cpu = bpf_get_smp_processor_id();
 	u64 pid = bpf_get_current_pid_tgid();
 	u64 ts = bpf_ktime_get_ns();
+	u64 nr = ctx->id;
+	struct remembered_args *remembered;
+	struct syscall_def_t *syscall_def;
 	struct syscall_event_t sc = {
 		.timestamp = ts,
 		.cpu = cpu,
 		.pid = pid,
 		.typ = SYSCALL_EVENT_TYPE_EXIT,
-		.id = ctx->id,
+		.id = nr,
 	};
 	sc.args[0] = ctx->ret;
 
+	syscall_def = bpf_map_lookup_elem(&syscalls, &nr);
+	if (syscall_def == NULL)
+		return 0;
+	/* no need to cleanup probe_at_sys_exit before returning because
+	 * "syscalls" is never modified between sys_enter and sys_exit
+	 */
+
+	remembered = bpf_map_lookup_elem(&probe_at_sys_exit, &pid);
+	if (remembered) {
+		#pragma clang loop unroll(full)
+		for (i = 0; i < 6; i++) {
+			__u64 arg_len = syscall_def->args_len[i];
+			if (arg_len != 0 && (arg_len & PARAM_PROBE_AT_EXIT_MASK)) {
+				bool null_terminated = false;
+				struct syscall_event_cont_t sc_cont = {
+					.timestamp = remembered->timestamp,
+					.typ = SYSCALL_EVENT_TYPE_CONT,
+					.index = i,
+					.failed = false,
+				};
+				arg_len &= ~PARAM_PROBE_AT_EXIT_MASK;
+
+				if (arg_len == USE_RET_AS_PARAM_LENGTH) {
+					if ((signed long) ctx->ret < 0)
+						arg_len = 0;
+					else
+						arg_len = ctx->ret;
+				} else if (arg_len == USE_NULL_BYTE_LENGTH) {
+					null_terminated = true;
+					arg_len = PARAM_LEN - 1;
+					/* enforce termination */
+					sc_cont.param[arg_len] = '\0';
+				} else if (arg_len >= USE_ARG_INDEX_AS_PARAM_LENGTH) {
+					__u64 idx = arg_len & USE_ARG_INDEX_AS_PARAM_LENGTH_MASK;
+					if (idx < 6)
+						arg_len = remembered->args[idx];
+					else
+						arg_len = PARAM_LEN;
+				}
+
+				if (arg_len > sizeof(sc_cont.param))
+					arg_len = sizeof(sc_cont.param);
+				if (null_terminated)
+					sc_cont.length = USE_NULL_BYTE_LENGTH;
+				else
+					sc_cont.length = arg_len;
+
+				if (bpf_probe_read(sc_cont.param, arg_len, (void *)(remembered->args[i]))) {
+					sc_cont.failed = true;
+				}
+				bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc_cont, sizeof(sc_cont));
+			}
+		}
+		bpf_map_delete_elem(&probe_at_sys_exit, &pid);
+	}
+
 	bpf_get_current_comm(sc.comm, sizeof(sc.comm));
-	err = bpf_perf_event_output(ctx, &events, cpu, &sc, sizeof(sc));
+	err = bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc, sizeof(sc));
 	printt("tailcall, exit: pid %llu NR %lu err=%d\n", pid >> 32, ctx->id, err);
 
 	return 0;

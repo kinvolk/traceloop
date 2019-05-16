@@ -9,6 +9,10 @@
 
 struct bpf_map_def;
 
+#ifndef BPF_F_CURRENT_CPU
+#define BPF_F_CURRENT_CPU               0xffffffffULL
+#endif
+
 #ifndef BPF_FUNC_get_current_cgroup_id
 #define BPF_FUNC_get_current_cgroup_id 80
 #endif

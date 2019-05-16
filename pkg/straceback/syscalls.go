@@ -213,37 +213,37 @@ func syscallGetCall(nr int, args [6]uint64, argsStr *[6]*string) string {
 
 func syscallGetDef(nr int) (args [6]uint64) {
 	if syscallNames[nr] == "execve" {
-		return [6]uint64{128, 0, 0, 0, 0, 0}
+		return [6]uint64{useNullByteLength, 0, 0, 0, 0, 0}
 	}
 	if syscallNames[nr] == "access" {
-		return [6]uint64{128, 0, 0, 0, 0, 0}
+		return [6]uint64{useNullByteLength, 0, 0, 0, 0, 0}
 	}
 	if syscallNames[nr] == "open" {
-		return [6]uint64{128, 0, 0, 0, 0, 0}
+		return [6]uint64{useNullByteLength, 0, 0, 0, 0, 0}
 	}
 	if syscallNames[nr] == "openat" {
-		return [6]uint64{0, 128, 0, 0, 0, 0}
+		return [6]uint64{0, useNullByteLength, 0, 0, 0, 0}
 	}
 	if syscallNames[nr] == "mkdir" {
-		return [6]uint64{128, 0, 0, 0, 0, 0}
+		return [6]uint64{useNullByteLength, 0, 0, 0, 0, 0}
 	}
 	if syscallNames[nr] == "chdir" {
-		return [6]uint64{128, 0, 0, 0, 0, 0}
+		return [6]uint64{useNullByteLength, 0, 0, 0, 0, 0}
 	}
 	if syscallNames[nr] == "stat" {
-		return [6]uint64{128, 0, 0, 0, 0, 0}
+		return [6]uint64{useNullByteLength, 0, 0, 0, 0, 0}
 	}
 	if syscallNames[nr] == "lstat" {
-		return [6]uint64{128, 0, 0, 0, 0, 0}
+		return [6]uint64{useNullByteLength, 0, 0, 0, 0, 0}
 	}
 	if syscallNames[nr] == "newfstatat" {
-		return [6]uint64{0, 128, 0, 0, 0, 0}
+		return [6]uint64{0, useNullByteLength, 0, 0, 0, 0}
 	}
 	if syscallNames[nr] == "read" {
-		return [6]uint64{0, 128, 0, 0, 0, 0}
+		return [6]uint64{0, useRetAsParamLength | paramProbeAtExitMask, 0, 0, 0, 0}
 	}
 	if syscallNames[nr] == "write" {
-		return [6]uint64{0, 128, 0, 0, 0, 0}
+		return [6]uint64{0, useArgIndexAsParamLength + 2, 0, 0, 0, 0}
 	}
 	return
 }
