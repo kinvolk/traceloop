@@ -19,8 +19,6 @@
 #include <net/inet_sock.h>
 #include <net/net_namespace.h>
 
-#define USE_QUEUE_MAP 0
-
 /* This is a key/value store with the keys being the cpu number
  * and the values being a perf file descriptor.
  */
@@ -60,17 +58,6 @@ struct bpf_map_def SEC("maps/probe_at_sys_exit") probe_at_sys_exit = {
 	.namespace = "",
 };
 
-#if USE_QUEUE_MAP
-struct bpf_map_def SEC("maps/queue") queue = {
-	.type = BPF_MAP_TYPE_QUEUE,
-	.key_size = 0,
-	.value_size = sizeof(__u64),
-	.max_entries = 1024,
-	.pinning = 0,
-	.namespace = "",
-};
-#endif
-
 struct sys_enter_args {
 	unsigned short common_type;
 	unsigned char common_flags;
@@ -94,7 +81,7 @@ struct sys_exit_args {
 SEC("tracepoint/raw_syscalls/sys_enter")
 int tracepoint__sys_enter(struct sys_enter_args *ctx)
 {
-	int i, err;
+	int i;
 	u32 cpu = bpf_get_smp_processor_id();
 	u64 pid = bpf_get_current_pid_tgid();
 	u64 ts = bpf_ktime_get_ns();
@@ -124,14 +111,7 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 		sc.cont_nr += !!syscall_def->args_len[i];
 	}
 
-	err = bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc, sizeof(sc));
-
-	printt("tailcall, enter: pid %llu NR %lu err=%d\n", pid >> 32, ctx->id, err);
-
-#if USE_QUEUE_MAP
-	err = bpf_map_push_elem(&queue, &nr, BPF_EXIST);
-	printt("tailcall, enter: queue nr %llu err=%d\n", nr, err);
-#endif
+	bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc, sizeof(sc));
 
 	bpf_map_update_elem(&probe_at_sys_exit, &pid, &remembered, BPF_ANY);
 
@@ -190,7 +170,7 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 SEC("tracepoint/raw_syscalls/sys_exit")
 int tracepoint__sys_exit(struct sys_exit_args *ctx)
 {
-	int i, err;
+	int i;
 	u32 cpu = bpf_get_smp_processor_id();
 	u64 pid = bpf_get_current_pid_tgid();
 	u64 ts = bpf_ktime_get_ns();
@@ -263,8 +243,7 @@ int tracepoint__sys_exit(struct sys_exit_args *ctx)
 	}
 
 	bpf_get_current_comm(sc.comm, sizeof(sc.comm));
-	err = bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc, sizeof(sc));
-	printt("tailcall, exit: pid %llu NR %lu err=%d\n", pid >> 32, ctx->id, err);
+	bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc, sizeof(sc));
 
 	return 0;
 }
