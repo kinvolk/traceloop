@@ -1,10 +1,46 @@
 # straceback
 
+straceback is a command line tool to trace system calls in a similar way to
+strace but with some differences:
+- straceback uses BPF instead of ptrace
+- straceback's tracing granularity is the control group (cgroup) instead of a
+  process
+- straceback's traces are recorded in a fast, in-memory, overwritable ring
+  buffer like a flight recorder. The tracing could be permanently enabled and
+  inspected in case of crash.
+
+straceback could be used directly on the command line or via an HTTP interface.
+
+straceback has been written to trace Kubernetes Pods with [Inspektor
+Gadget](https://github.com/kinvolk/inspektor-gadget), but it can as easily be
+used with systemd services that are in their own control groups (look for
+`.service` and `.scope` directories inside `/sys/fs/cgroup/unified/`).
+
 ## On the command line
 
+Example with an existing systemd service:
 ```
 sudo -E ./straceback /sys/fs/cgroup/unified/system.slice/sshd.service
 ```
+
+Example with a custom command:
+```
+sudo systemd-run -t  --unit=test42.service  /bin/sh -c 'for i in $(seq 1 1000) ; do sleep 4 ; echo 2*3*7 | bc > /dev/null ; echo Multiplication $i done. ; done'
+...
+sudo -E ./straceback /sys/fs/cgroup/unified/system.slice/test42.service
+...
+00:04.022260640 cpu#0 pid 23981 [bc] brk(brk=0) = 94045092683776
+00:04.022346588 cpu#0 pid 23981 [bc] ioctl(fd=0, cmd=21505, arg=140721805741680) = 18446744073709551591
+00:04.022361201 cpu#0 pid 23981 [bc] read(fd=0, buf=94045092586128 "2*3*7\n", count=8192) = 6
+00:04.022401517 cpu#0 pid 23981 [bc] fstat() = 0
+00:04.022414650 cpu#0 pid 23981 [bc] ioctl(fd=1, cmd=21505, arg=140721805741312) = 18446744073709551591
+00:04.022440173 cpu#0 pid 23981 [bc] write(fd=1, buf=94045092602832 "42\n", count=3) = 3
+00:04.022460351 cpu#0 pid 23981 [bc] read(fd=0, buf=94045092586128 "", count=8192) = 0
+00:04.022475888 cpu#0 pid 23981 [bc] ioctl(fd=0, cmd=21505, arg=140721805741616) = 18446744073709551591
+00:04.022525326 cpu#0 pid 23981 [bc] exit_group(error_code=0)...
+00:04.022833827 cpu#2 pid 23961 [sh] ...wait4() = 23981
+```
+
 
 ## With Docker
 
@@ -25,14 +61,4 @@ $ sudo curl --unix-socket /run/straceback.socket 'http://localhost/list'
 $ sudo curl --unix-socket /run/straceback.socket 'http://localhost/dump-by-cgroup?cgroup=/sys/fs/cgroup/unified/system.slice/sshd.service'
 ...
 
-```
-
-## Example of logs
-
-```
-728974746616427 cpu#3 pid 17976 [sshd] close(fd)
-728974746623494 cpu#3 pid 17976 [sshd] openat(dfd, filename, flags, mode)
-728974746627090 cpu#3 pid 17976 [sshd] read(fd, buf, count)
-728974746629674 cpu#3 pid 17976 [sshd] fstat()
-728974746632360 cpu#3 pid 17976 [sshd] mmap(addr, len, prot, flags, fd, off)
 ```
