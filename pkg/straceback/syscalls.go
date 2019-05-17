@@ -175,7 +175,7 @@ func gatherSyscalls() error {
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("error walking %q: %v", err)
+		return fmt.Errorf("error walking %q: %v", syscallsPath, err)
 	}
 	return nil
 }
