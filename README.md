@@ -1,17 +1,17 @@
-# straceback
+# traceloop
 
-straceback is a command line tool to trace system calls in a similar way to
+traceloop is a command line tool to trace system calls in a similar way to
 strace but with some differences:
-- straceback uses BPF instead of ptrace
-- straceback's tracing granularity is the control group (cgroup) instead of a
+- traceloop uses BPF instead of ptrace
+- traceloop's tracing granularity is the control group (cgroup) instead of a
   process
-- straceback's traces are recorded in a fast, in-memory, overwritable ring
+- traceloop's traces are recorded in a fast, in-memory, overwritable ring
   buffer like a flight recorder. The tracing could be permanently enabled and
   inspected in case of crash.
 
-straceback could be used directly on the command line or via an HTTP interface.
+traceloop can be used directly on the command line or via an HTTP interface.
 
-straceback has been written to trace Kubernetes Pods with [Inspektor
+traceloop has been written to trace Kubernetes Pods with [Inspektor
 Gadget](https://github.com/kinvolk/inspektor-gadget), but it can as easily be
 used with systemd services that are in their own control groups (look for
 `.service` and `.scope` directories inside `/sys/fs/cgroup/unified/`).
@@ -20,14 +20,14 @@ used with systemd services that are in their own control groups (look for
 
 Example with an existing systemd service:
 ```
-sudo -E ./straceback /sys/fs/cgroup/unified/system.slice/sshd.service
+sudo -E ./traceloop /sys/fs/cgroup/unified/system.slice/sshd.service
 ```
 
 Example with a custom command:
 ```
 sudo systemd-run -t  --unit=test42.service  /bin/sh -c 'for i in $(seq 1 1000) ; do sleep 4 ; echo 2*3*7 | bc > /dev/null ; echo Multiplication $i done. ; done'
 ...
-sudo -E ./straceback /sys/fs/cgroup/unified/system.slice/test42.service
+sudo -E ./traceloop /sys/fs/cgroup/unified/system.slice/test42.service
 ...
 00:04.022260640 cpu#0 pid 23981 [bc] brk(brk=0) = 94045092683776
 00:04.022346588 cpu#0 pid 23981 [bc] ioctl(fd=0, cmd=21505, arg=140721805741680) = 18446744073709551591
@@ -45,20 +45,20 @@ sudo -E ./straceback /sys/fs/cgroup/unified/system.slice/test42.service
 ## With Docker
 
 ```
-docker run --rm -v /sys/kernel/debug:/sys/kernel/debug -v /sys/fs/cgroup:/sys/fs/cgroup -v /sys/fs/bpf:/sys/fs/bpf -v /run:/run --privileged kinvolk/straceback
+docker run --rm -v /sys/kernel/debug:/sys/kernel/debug -v /sys/fs/cgroup:/sys/fs/cgroup -v /sys/fs/bpf:/sys/fs/bpf -v /run:/run --privileged kinvolk/traceloop
 ```
 
 ## With HTTP interface
 
 ```
-sudo -E ./straceback serve
+sudo -E ./traceloop serve
 ...
 
-$ sudo curl --unix-socket /run/straceback.socket 'http://localhost/add?name=sshd&cgrouppath=/sys/fs/cgroup/unified/system.slice/sshd.service'
+$ sudo curl --unix-socket /run/traceloop.socket 'http://localhost/add?name=sshd&cgrouppath=/sys/fs/cgroup/unified/system.slice/sshd.service'
 added as id 0
-$ sudo curl --unix-socket /run/straceback.socket 'http://localhost/list'
+$ sudo curl --unix-socket /run/traceloop.socket 'http://localhost/list'
 0: [sshd] /sys/fs/cgroup/unified/system.slice/sshd.service
-$ sudo curl --unix-socket /run/straceback.socket 'http://localhost/dump-by-cgroup?cgroup=/sys/fs/cgroup/unified/system.slice/sshd.service'
+$ sudo curl --unix-socket /run/traceloop.socket 'http://localhost/dump-by-cgroup?cgroup=/sys/fs/cgroup/unified/system.slice/sshd.service'
 ...
 
 ```

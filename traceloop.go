@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"strconv"
 
-	"github.com/kinvolk/straceback/pkg/straceback"
+	"github.com/kinvolk/traceloop/pkg/straceback"
 )
 
 var (
@@ -125,7 +125,7 @@ func main() {
 		http.HandleFunc("/close-by-name", closeByNameHandler)
 		server := http.Server{}
 
-		unixListener, err := net.Listen("unix", "/run/straceback.socket")
+		unixListener, err := net.Listen("unix", "/run/traceloop.socket")
 		if err != nil {
 			panic(err)
 		}

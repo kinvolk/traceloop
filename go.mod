@@ -1,4 +1,4 @@
-module github.com/kinvolk/straceback
+module github.com/kinvolk/traceback
 
 go 1.12
 
