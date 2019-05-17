@@ -2,16 +2,16 @@ DEBUG=1
 UID=$(shell id -u)
 PWD=$(shell pwd)
 
-BUILDER_DOCKER_FILE?=straceback-builder.Dockerfile
-BUILDER_DOCKER_IMAGE?=kinvolk/straceback-builder
+BUILDER_DOCKER_FILE?=traceloop-builder.Dockerfile
+BUILDER_DOCKER_IMAGE?=kinvolk/traceloop-builder
 
-DOCKER_FILE?=straceback.Dockerfile
-DOCKER_IMAGE?=kinvolk/straceback
+DOCKER_FILE?=traceloop.Dockerfile
+DOCKER_IMAGE?=kinvolk/traceloop
 
 # If you can use docker without being root, you can do "make SUDO="
 SUDO=$(shell docker info >/dev/null 2>&1 || echo "sudo -E")
 
-all: build-docker-image build-bpf-object install-generated-go bin-straceback docker/image
+all: build-docker-image build-bpf-object install-generated-go bin-traceloop docker/image
 
 build-docker-image:
 	$(SUDO) docker build -t $(BUILDER_DOCKER_IMAGE) -f $(BUILDER_DOCKER_FILE) .
@@ -32,8 +32,8 @@ install-generated-go:
 delete-docker-image:
 	$(SUDO) docker rmi -f $(BUILDER_DOCKER_IMAGE)
 
-bin-straceback:
-	go build -o straceback straceback.go
+bin-traceloop:
+	go build -o traceloop traceloop.go
 
 docker/image:
 	$(SUDO) docker build -t $(DOCKER_IMAGE) -f $(DOCKER_FILE) .

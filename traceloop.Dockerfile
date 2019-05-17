@@ -2,5 +2,5 @@ FROM ubuntu
 RUN apt-get update && apt-get install -y \
   curl
 
-ADD straceback /bin/
-CMD ["/bin/straceback", "serve"]
+ADD traceloop /bin/
+CMD ["/bin/traceloop", "serve"]

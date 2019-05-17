@@ -1,4 +1,4 @@
 .*.swp
 /bpf/*.o
 /bpf/straceback-assets-bpf.go
-/straceback
+/traceloop
