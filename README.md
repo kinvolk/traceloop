@@ -54,7 +54,7 @@ docker run --rm -v /sys/kernel/debug:/sys/kernel/debug -v /sys/fs/cgroup:/sys/fs
 sudo -E ./straceback serve
 ...
 
-$sudo curl --unix-socket /run/straceback.socket 'http://localhost/add?name=sshd&cgrouppath=/sys/fs/cgroup/unified/system.slice/sshd.service'
+$ sudo curl --unix-socket /run/straceback.socket 'http://localhost/add?name=sshd&cgrouppath=/sys/fs/cgroup/unified/system.slice/sshd.service'
 added as id 0
 $ sudo curl --unix-socket /run/straceback.socket 'http://localhost/list'
 0: [sshd] /sys/fs/cgroup/unified/system.slice/sshd.service
