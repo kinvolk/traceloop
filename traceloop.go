@@ -146,8 +146,12 @@ func main() {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, os.Kill)
 
+	i := 0
+
+again:
 	<-sig
 	fmt.Printf("Interrupted!\n")
+
 
 	for _, id := range ids {
 		fmt.Printf("Dump with queue map:\n")
@@ -159,6 +163,11 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Printf("%s", out)
+	}
+
+	i++
+	if (i < 5) {
+		goto again
 	}
 
 	t.Stop()
