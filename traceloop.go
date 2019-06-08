@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"time"
 
 	"github.com/kinvolk/traceloop/pkg/straceback"
 )
@@ -146,19 +147,27 @@ func main() {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, os.Kill)
 
-	<-sig
-	fmt.Printf("Interrupted!\n")
+	ticker := time.Tick(time.Millisecond * 250)
 
-	for _, id := range ids {
-		fmt.Printf("Dump with queue map:\n")
-		_ = t.DumpProgWithQueue(id)
-		fmt.Printf("Dump:\n")
-		out, err := t.DumpProg(id)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-			os.Exit(1)
+LOOP:
+	for {
+		select {
+			case <-ticker:
+			case <-sig:
+				fmt.Printf("Interrupted!\n")
+				break LOOP
 		}
-		fmt.Printf("%s", out)
+
+		for _, id := range ids {
+			_ = t.DumpProgWithQueue(id)
+			out, err := t.DumpProg(id)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v\n", err)
+				os.Exit(1)
+			}
+			// Clear screen to remove old contents before printing the full log again
+			fmt.Printf("\033[2J%s", out)
+		}
 	}
 
 	t.Stop()
