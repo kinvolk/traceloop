@@ -146,19 +146,35 @@ func main() {
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, os.Interrupt, os.Kill)
 
-	<-sig
-	fmt.Printf("Interrupted!\n")
+	enterchan := make(chan bool)
 
-	for _, id := range ids {
-		fmt.Printf("Dump with queue map:\n")
-		_ = t.DumpProgWithQueue(id)
-		fmt.Printf("Dump:\n")
-		out, err := t.DumpProg(id)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-			os.Exit(1)
+	go func () {
+		for {
+			fmt.Println("Press Enter to dump trace or Ctrl-C to terminate:")
+			fmt.Scanln()
+			enterchan <- true
 		}
-		fmt.Printf("%s", out)
+	}()
+
+mainloop:
+	for {
+		select {
+		case <- sig:
+			fmt.Printf("Interrupted!\n")
+			break mainloop
+		case <- enterchan:
+			for _, id := range ids {
+				fmt.Printf("Dump with queue map:\n")
+				_ = t.DumpProgWithQueue(id)
+				fmt.Printf("Dump:\n")
+				out, err := t.DumpProg(id)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "%v\n", err)
+					os.Exit(1)
+				}
+				fmt.Printf("%s", out)
+			}
+		}
 	}
 
 	t.Stop()

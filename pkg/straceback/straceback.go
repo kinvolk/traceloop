@@ -221,10 +221,7 @@ func (sb *StraceBack) DumpProg(id uint32) (out string, err error) {
 		return "", fmt.Errorf("invalid index")
 	}
 
-	_ = sb.tracelets[id].tailCallProg.PerfMapStop("events")
-	/* ignore error: it might have been stopped already */
-
-	arr := sb.tracelets[id].pm.DumpBackward()
+	arr := sb.tracelets[id].pm.SwapAndDumpBackward()
 	out = eventsToString(eventsToGo(arr))
 	return
 }
