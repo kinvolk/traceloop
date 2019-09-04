@@ -1,2 +1,4 @@
-github.com/kinvolk/gobpf v0.0.0-20190426145724-a01317ace7a1 h1:Lk6hLMmaTUaLt6GQrIhJHN+6yAHw4NW98KUOD+vnfGw=
-github.com/kinvolk/gobpf v0.0.0-20190426145724-a01317ace7a1/go.mod h1:61h4gva56IGKqstHOMIC38bRpXailv183ew8e9w2AQo=
+github.com/kinvolk/gobpf v0.0.0-20190520160016-627240a2ec0a h1:dG8svxFoLDFvL2KBadSYXGi0p6CQCpJQqaRb8hZRn5A=
+github.com/kinvolk/gobpf v0.0.0-20190520160016-627240a2ec0a/go.mod h1:61h4gva56IGKqstHOMIC38bRpXailv183ew8e9w2AQo=
+github.com/kinvolk/gobpf v0.0.0-20190904163508-70f33f7f474b h1:HnF6m6R6vgEzok/rUw0NxWZTSN36+QtNSTbxvK6vM+Q=
+github.com/kinvolk/gobpf v0.0.0-20190904163508-70f33f7f474b/go.mod h1:61h4gva56IGKqstHOMIC38bRpXailv183ew8e9w2AQo=
