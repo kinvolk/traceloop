@@ -207,6 +207,19 @@ func syscallGetCall(nr int, args [6]uint64, argsStr *[6]*string) string {
 			}
 		}
 	}
+
+	// if we don't have information about function parameters
+	if len(cSyscalls[name].Params) == 0 {
+		for i, arg := range args {
+			if i != 0 {
+				ret += ", "
+			}
+			ret += fmt.Sprintf("%v", arg)
+			if argsStr != nil && argsStr[i] != nil {
+				ret += fmt.Sprintf(" %q", *(*argsStr)[i])
+			}
+		}
+	}
 	ret += ")"
 	return ret
 }
