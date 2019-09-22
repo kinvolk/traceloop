@@ -18,6 +18,13 @@ var (
 )
 
 func main() {
+	if len(os.Args) == 2 && os.Args[1] == "guess" {
+		fmt.Printf("Guess pidns offset\n")
+		err := straceback.Guess()
+		fmt.Printf("%v\n", err)
+		os.Exit(0)
+	}
+
 	if len(os.Args) == 2 && os.Args[1] == "serve" {
 		serveHttp = true
 	} else {
@@ -152,10 +159,10 @@ func main() {
 LOOP:
 	for {
 		select {
-			case <-ticker:
-			case <-sig:
-				fmt.Printf("Interrupted!\n")
-				break LOOP
+		case <-ticker:
+		case <-sig:
+			fmt.Printf("Interrupted!\n")
+			break LOOP
 		}
 
 		for _, id := range ids {
