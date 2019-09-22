@@ -218,15 +218,25 @@ LOOP:
 			break LOOP
 		}
 
-		for _, id := range ids {
+		for n, id := range ids {
+			cgroupPath, err := t.GetCgroupPath(id)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v\n", err)
+				os.Exit(1)
+			}
 			_ = t.DumpProgWithQueue(id)
 			out, err := t.DumpProg(id)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "%v\n", err)
 				os.Exit(1)
 			}
-			// Clear screen to remove old contents before printing the full log again
-			fmt.Printf("\033[2J%s", out)
+			clearScreen := ""
+			if n == 0 {
+				// Clear screen to remove old contents before printing the full log again
+				clearScreen = "\033[2J"
+			}
+			fmt.Printf("%s\nDump for %s:\n%sEnd of dump for %s (Press Ctrl-S to pause, Ctrl-Q to continue, Ctrl-C to quit)\n",
+				clearScreen, cgroupPath, out, cgroupPath)
 		}
 	}
 
