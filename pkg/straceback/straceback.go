@@ -224,11 +224,12 @@ func (sb *StraceBack) DumpProg(id uint32) (out string, err error) {
 		return "", fmt.Errorf("invalid index")
 	}
 
-	arr := sb.tracelets[id].pm.SwapAndDumpBackward()
+	arr := sb.tracelets[id].pm.SwapAndDumpBackward(MakeLostEventIndicator)
 	sb.tracelets[id].eventBuffer = append(sb.tracelets[id].eventBuffer, eventsToGo(arr)...)
-	if len(sb.tracelets[id].eventBuffer) > maxEvents {
-		sb.tracelets[id].eventBuffer = sb.tracelets[id].eventBuffer[len(sb.tracelets[id].eventBuffer)-maxEvents:]
-	}
+	//if len(sb.tracelets[id].eventBuffer) > maxEvents {
+	// TODO: add marker at front
+	//	sb.tracelets[id].eventBuffer = sb.tracelets[id].eventBuffer[len(sb.tracelets[id].eventBuffer)-maxEvents:]
+	//}
 	out = eventsToString(sb.tracelets[id].eventBuffer)
 	return
 }

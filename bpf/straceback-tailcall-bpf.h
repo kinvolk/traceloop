@@ -54,6 +54,7 @@ const __u64 USE_ARG_INDEX_AS_PARAM_LENGTH_MASK = 0xfULL;
 #define SYSCALL_EVENT_TYPE_ENTER 0
 #define SYSCALL_EVENT_TYPE_EXIT  1
 #define SYSCALL_EVENT_TYPE_CONT  2
+#define SYSCALL_EVENT_TYPE_LOST  3
 
 struct syscall_event_t {
 	__u64 timestamp;

@@ -41,6 +41,8 @@ func eventToGo(data *[]byte) (ret Event) {
 	ret.Typ = int(eventC.typ)
 
 	switch ret.Typ {
+	case 3: // SYSCALL_EVENT_TYPE_LOST
+		ret.CPU = int(eventC.cpu)
 	case 2: // SYSCALL_EVENT_TYPE_CONT
 		eventContC := (*C.struct_syscall_event_cont_t)(unsafe.Pointer(&(*data)[0]))
 		ret.ParamIdx = int(eventContC.index)
@@ -77,6 +79,17 @@ func eventsToGo(data [][]byte) (ret []Event) {
 	return
 }
 
+func MakeLostEventIndicator(cpu uint16, data []byte) ([]byte, error) {
+	// This operates on a copy of the original array
+	eventC := (*C.struct_syscall_event_t)(unsafe.Pointer(&data[0]))
+	// Decrease the timestamp to simulate an older event in the sorting
+	eventC.timestamp = eventC.timestamp - 1
+	eventC.typ = C.SYSCALL_EVENT_TYPE_LOST
+	eventC.cpu = C.ushort(cpu)
+	fmt.Printf("Inserted LOST event\n")
+	return data, nil
+}
+
 func eventTimestamp(data *[]byte) uint64 {
 	eventC := (*C.struct_syscall_event_t)(unsafe.Pointer(&(*data)[0]))
 	eventContC := (*C.struct_syscall_event_cont_t)(unsafe.Pointer(&(*data)[0]))
@@ -97,6 +110,8 @@ func (e Event) String() string {
 		return fmt.Sprintf("%v cpu#%d pid %d [%s] ...%s() returns %d", e.Timestamp, e.CPU, e.Pid, e.Comm, syscallGetName(int(e.ID)), int(e.Ret))
 	case 2:
 		return fmt.Sprintf("%v %q", e.Timestamp, e.Param)
+	case 3:
+		return fmt.Sprintf("%v cpu#%d Previous events might be lost due to full buffer", e.Timestamp, e.CPU)
 	default:
 		return fmt.Sprintf("%v cpu#%d pid %d [%s] unknown", e.Timestamp, e.CPU, e.Pid, e.Comm)
 	}
@@ -133,6 +148,8 @@ func eventsToString(events []Event) (ret string) {
 			ret += fmt.Sprintf("%v cpu#%d pid %d [%s] ...%s() = %d\n", timeStr, e.CPU, e.Pid, e.Comm, syscallGetName(int(e.ID)), int(e.Ret))
 		case 2:
 			ret += fmt.Sprintf("%v %q\n", timeStr, e.Param)
+		case 3:
+			ret += fmt.Sprintf("%v cpu#%d Previous events might be lost due to full buffer", e.Timestamp, e.CPU)
 		default:
 			ret += fmt.Sprintf("%v cpu#%d pid %d [%s] unknown (#%d)\n", timeStr, e.CPU, e.Pid, e.Comm, e.Typ)
 		}
