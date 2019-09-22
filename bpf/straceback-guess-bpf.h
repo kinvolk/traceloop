@@ -24,4 +24,8 @@ struct guess_status_t {
 	__u32 pidns;
 };
 
+#define MAX_TRACED_PROGRAMS 128
+
+#define MAX_POOLED_PROGRAMS 16
+
 #endif

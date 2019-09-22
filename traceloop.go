@@ -14,15 +14,13 @@ import (
 
 var (
 	serveHttp bool
+	withPidns bool
 	paths     []string
 )
 
 func main() {
 	if len(os.Args) == 2 && os.Args[1] == "guess" {
-		fmt.Printf("Guess pidns offset\n")
-		err := straceback.Guess()
-		fmt.Printf("%v\n", err)
-		os.Exit(0)
+		withPidns = true
 	}
 
 	if len(os.Args) == 2 && os.Args[1] == "serve" {
@@ -31,10 +29,31 @@ func main() {
 		paths = os.Args[1:]
 	}
 
-	t, err := straceback.NewTracer()
+	t, err := straceback.NewTracer(withPidns)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
+	}
+
+	if withPidns {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, os.Interrupt, os.Kill)
+		select {
+		case <-sig:
+			fmt.Printf("Interrupted!\n")
+			break
+		}
+		for i := 0; i < 16; i++ {
+			fmt.Printf("Program %d\n", i)
+			out, err := t.DumpProg(uint32(i))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "%v\n", err)
+				os.Exit(1)
+			}
+			fmt.Printf("%s", out)
+		}
+
+		os.Exit(0)
 	}
 
 	if serveHttp {

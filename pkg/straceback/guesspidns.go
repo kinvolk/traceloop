@@ -1,7 +1,6 @@
 package straceback
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"runtime"
@@ -123,32 +122,10 @@ func checkAndUpdateCurrentOffset(module *bpflib.Module, mp *bpflib.Map, status *
 	return nil
 }
 
-func Guess() error {
+func guess(m *bpflib.Module) error {
 	currentPidns, err := ownPidNS()
 	if err != nil {
 		return fmt.Errorf("error getting current pidns: %v", err)
-	}
-
-	buf, err := Asset("straceback-guess-bpf.o")
-	if err != nil {
-		return fmt.Errorf("couldn't find asset: %s", err)
-	}
-	reader := bytes.NewReader(buf)
-
-	m := bpflib.NewModuleFromReader(reader)
-	if m == nil {
-		return fmt.Errorf("BPF not supported")
-	}
-
-	sectionParams := make(map[string]bpflib.SectionParams)
-	err = m.Load(sectionParams)
-	if err != nil {
-		return err
-	}
-
-	err = m.EnableTracepoint("tracepoint/raw_syscalls/sys_enter")
-	if err != nil {
-		return err
 	}
 
 	mp := m.Map("guess_status")
@@ -158,6 +135,7 @@ func Guess() error {
 	defer runtime.UnlockOSThread()
 
 	pidTgid := uint64(os.Getpid())<<32 | uint64(syscall.Gettid())
+	fmt.Printf("pid %v tid %v\n", os.Getpid(), syscall.Gettid())
 
 	status := &guessStatus{
 		state:    stateChecking,

@@ -9,9 +9,10 @@ import (
 )
 
 /*
-#include "../../bpf/straceback-main-bpf.h"
+#include "../../bpf/straceback-guess-bpf.h"
 
 const int MaxTracedPrograms = MAX_TRACED_PROGRAMS;
+const int MaxPooledPrograms = MAX_POOLED_PROGRAMS;
 */
 import "C"
 
@@ -39,8 +40,13 @@ type StraceBack struct {
 	stopChan      chan struct{}
 }
 
-func NewTracer() (*StraceBack, error) {
-	buf, err := Asset("straceback-main-bpf.o")
+func NewTracer(withPidns bool) (*StraceBack, error) {
+	obj := "straceback-main-bpf.o"
+	if withPidns {
+		obj = "straceback-guess-bpf.o"
+	}
+
+	buf, err := Asset(obj)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't find asset: %s", err)
 	}
@@ -78,6 +84,21 @@ func NewTracer() (*StraceBack, error) {
 	}
 
 	stopChan := make(chan struct{})
+	t := make([]*Tracelet, C.MaxTracedPrograms)
+
+	if withPidns {
+		err = guess(m)
+		if err != nil {
+			return nil, err
+		}
+		// init tracelet pool
+		for i := 0; i < int(C.MaxPooledPrograms); i++ {
+			t[i], err = getDummyTracelet(m, tailCallEnter, tailCallExit, uint32(i))
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
 
 	return &StraceBack{
 		mainProg:      m,
@@ -85,7 +106,7 @@ func NewTracer() (*StraceBack, error) {
 		tailCallEnter: tailCallEnter,
 		tailCallExit:  tailCallExit,
 		syscallsDef:   syscallsDef,
-		tracelets:     make([]*Tracelet, C.MaxTracedPrograms),
+		tracelets:     t,
 		stopChan:      stopChan,
 	}, nil
 }
@@ -98,6 +119,64 @@ func (sb *StraceBack) List() (out string) {
 		out += fmt.Sprintf("%d: [%s] %s\n", i, sb.tracelets[i].description, sb.tracelets[i].cgroupPath)
 	}
 	return
+}
+
+func getDummyTracelet(mainProg *bpflib.Module, tailCallEnter *bpflib.Map, tailCallExit *bpflib.Map, idx uint32) (*Tracelet, error) {
+	tracelet := Tracelet{
+		eventChan: make(chan []byte),
+		lostChan:  make(chan uint64),
+	}
+
+	buf, err := Asset("straceback-tailcall-bpf.o")
+	if err != nil {
+		return nil, fmt.Errorf("couldn't find asset: %s", err)
+	}
+	reader := bytes.NewReader(buf)
+
+	m := bpflib.NewModuleFromReader(reader)
+	if m == nil {
+		return nil, fmt.Errorf("BPF not supported")
+	}
+	tracelet.tailCallProg = m
+
+	sectionParams := make(map[string]bpflib.SectionParams)
+	sectionParams["maps/events"] = bpflib.SectionParams{
+		PerfRingBufferPageCount: 64,
+		PerfRingBufferBackward:  true,
+	}
+	err = m.Load(sectionParams)
+	if err != nil {
+		return nil, err
+	}
+	pm, err := bpflib.InitPerfMap(m, "events", tracelet.eventChan, tracelet.lostChan)
+	if err != nil {
+		return nil, fmt.Errorf("error initializing perf map: %v", err)
+	}
+	pm.SetTimestampFunc(eventTimestamp)
+
+	tracelet.pm = pm
+
+	var fdEnter int = -1
+	var fdExit int = -1
+	for tp := range m.IterTracepointProgram() {
+		if tp.Name == "tracepoint/raw_syscalls/sys_enter" {
+			fdEnter = tp.Fd()
+		}
+		if tp.Name == "tracepoint/raw_syscalls/sys_exit" {
+			fdExit = tp.Fd()
+		}
+	}
+	if fdExit == -1 || fdExit == -1 {
+		return nil, fmt.Errorf("couldn't find tracepoint fd")
+	}
+	if err := mainProg.UpdateElement(tailCallEnter, unsafe.Pointer(&idx), unsafe.Pointer(&fdEnter), 0); err != nil {
+		return nil, fmt.Errorf("error updating tail call enter map: %v", err)
+	}
+	if err := mainProg.UpdateElement(tailCallExit, unsafe.Pointer(&idx), unsafe.Pointer(&fdExit), 0); err != nil {
+		return nil, fmt.Errorf("error updating tail call exit map: %v", err)
+	}
+
+	return &tracelet, nil
 }
 
 func (sb *StraceBack) AddProg(cgroupPath string, description string) (uint32, error) {
