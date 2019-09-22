@@ -13,15 +13,33 @@ import (
 )
 
 var (
-	serveHttp bool
-	paths     []string
+	serveHttp  bool
+	dumpOnExit bool
+	paths      []string
 )
 
 func main() {
+	if len(os.Args) == 1 || os.Args[1] == "-h" || os.Args[1] == "--help" || os.Args[1] == "help" {
+		fmt.Printf("Usage:\n%s <serve>|<CGROUPS...>|<signal-dump CGROUPS...>\n", os.Args[0])
+		fmt.Printf("  serve:                   Start daemon with HTTP API on /run/traceloop.socket.\n")
+		fmt.Printf("  CGROUPS...:              One or more arguments to specify the CGroup path(s) to attach to.\n")
+		fmt.Printf("                           The ring buffer contents are continuously dumped.\n")
+		fmt.Printf("  dump-on-exit CGROUPS...: As above but only dump when the traceloop process is killed.\n")
+		os.Exit(0)
+	}
 	if len(os.Args) == 2 && os.Args[1] == "serve" {
 		serveHttp = true
 	} else {
-		paths = os.Args[1:]
+		if os.Args[1] == "dump-on-exit" {
+			dumpOnExit = true
+			paths = os.Args[2:]
+		} else {
+			paths = os.Args[1:]
+		}
+		if len(paths) == 0 {
+			fmt.Fprintf(os.Stderr, "No cgroup paths specified.\n")
+			os.Exit(1)
+		}
 	}
 
 	t, err := straceback.NewTracer()
@@ -149,13 +167,16 @@ func main() {
 
 	ticker := time.Tick(time.Millisecond * 250)
 
-LOOP:
-	for {
+	terminate := false
+
+	for !terminate {
 		select {
 			case <-ticker:
+				if dumpOnExit {
+					continue
+				}
 			case <-sig:
-				fmt.Printf("Interrupted!\n")
-				break LOOP
+				terminate = true
 		}
 
 		for n, id := range ids {
@@ -171,12 +192,17 @@ LOOP:
 				os.Exit(1)
 			}
 			clearScreen := ""
-			if n == 0 {
+			if n == 0 && !dumpOnExit {
 				// Clear screen to remove old contents before printing the full log again
 				clearScreen = "\033[2J"
 			}
 			fmt.Printf("%s\nDump for %s:\n%sEnd of dump for %s (Press Ctrl-S to pause, Ctrl-Q to continue, Ctrl-C to quit)\n",
 				clearScreen, cgroupPath, out, cgroupPath)
+		}
+
+		if terminate {
+			fmt.Printf("Interrupted!\n")
+			break
 		}
 	}
 
