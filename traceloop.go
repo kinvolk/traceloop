@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 var (
 	serveHttp bool
 	withPidns bool
+	dumpOnExit bool
 	paths     []string
 )
 
@@ -23,19 +25,71 @@ var version = "undefined"
 
 func main() {
 	fmt.Printf("traceloop version %v\n", version)
-	if len(os.Args) == 2 && os.Args[1] == "k8s" {
+	usage := func() {
+		fmt.Printf("Usage:\n%s <k8s>|<guess>|<serve>|<cgroups [--dump-on-exit] CGROUPS...>\n", os.Args[0])
+		fmt.Printf("  guess:                   Look for newly created Docker containers.\n")
+		fmt.Printf("  k8s:                     Look for newly created Docker containers and start daemon with HTTP API on /run/traceloop.socket.\n")
+		fmt.Printf("  serve:                   Start daemon with HTTP API on /run/traceloop.socket.\n")
+		fmt.Printf("  cgroups CGROUPS...:      One or more arguments to specify the CGroup path(s) to attach to.\n")
+		fmt.Printf("                           The ring buffer contents are continuously dumped.\n")
+		fmt.Printf("                           The optional flag --dump-on-exit disables interactive usage\n")
+		fmt.Printf("                           so that the dump is only done when the traceloop process is terminated.\n")
+	}
+	guessCmd := flag.NewFlagSet("guess", flag.ExitOnError)
+	guessCmd.Usage = usage
+	k8sCmd := flag.NewFlagSet("k8s", flag.ExitOnError)
+	k8sCmd.Usage = usage
+	serveCmd := flag.NewFlagSet("serve", flag.ExitOnError)
+	serveCmd.Usage = usage
+	cgroupsCmd := flag.NewFlagSet("cgroups", flag.ExitOnError)
+	dumpOnExitEnable := cgroupsCmd.Bool("dump-on-exit", false, "dump-on-exit")
+	cgroupsCmd.Usage = usage
+	if len(os.Args) == 1 || os.Args[1] == "-h" || os.Args[1] == "--help" || os.Args[1] == "help" {
+		usage()
+		os.Exit(0)
+	}
+	switch os.Args[1] {
+	case "guess":
+		guessCmd.Parse(os.Args[2:])
+		withPidns = true
+		args := guessCmd.Args()
+		if len(args) > 0 {
+			fmt.Fprintf(os.Stderr, "Unexpected additional arguments: %q.\n", args)
+			usage()
+			os.Exit(1)
+		}
+	case "k8s":
+		k8sCmd.Parse(os.Args[2:])
 		withPidns = true
 		serveHttp = true
-	}
-
-	if len(os.Args) == 2 && os.Args[1] == "guess" {
-		withPidns = true
-	}
-
-	if len(os.Args) == 2 && os.Args[1] == "serve" {
+		args := k8sCmd.Args()
+		if len(args) > 0 {
+			fmt.Fprintf(os.Stderr, "Unexpected additional arguments: %q.\n", args)
+			usage()
+			os.Exit(1)
+		}
+	case "serve":
+		serveCmd.Parse(os.Args[2:])
 		serveHttp = true
-	} else {
-		paths = os.Args[1:]
+		args := serveCmd.Args()
+		if len(args) > 0 {
+			fmt.Fprintf(os.Stderr, "Unexpected additional arguments: %q.\n", args)
+			usage()
+			os.Exit(1)
+		}
+	case "cgroups":
+		cgroupsCmd.Parse(os.Args[2:])
+		dumpOnExit = *dumpOnExitEnable
+		paths = cgroupsCmd.Args()
+		if len(paths) == 0 {
+			fmt.Fprintf(os.Stderr, "No cgroup paths specified.\n")
+			usage()
+			os.Exit(1)
+		}
+	default:
+		fmt.Fprintf(os.Stderr, "Unknown argument %q.\n", os.Args[1])
+		usage()
+		os.Exit(1)
 	}
 
 	t, err := straceback.NewTracer(withPidns, withPidns, withPidns)
@@ -209,13 +263,16 @@ func main() {
 
 	ticker := time.Tick(time.Millisecond * 250)
 
-LOOP:
-	for {
+	terminate := false
+
+	for !terminate {
 		select {
 		case <-ticker:
+			if dumpOnExit {
+				continue
+			}
 		case <-sig:
-			fmt.Printf("Interrupted!\n")
-			break LOOP
+			terminate = true
 		}
 
 		for n, id := range ids {
@@ -231,12 +288,17 @@ LOOP:
 				os.Exit(1)
 			}
 			clearScreen := ""
-			if n == 0 {
+			if n == 0 && !dumpOnExit {
 				// Clear screen to remove old contents before printing the full log again
 				clearScreen = "\033[2J"
 			}
 			fmt.Printf("%s\nDump for %s:\n%sEnd of dump for %s (Press Ctrl-S to pause, Ctrl-Q to continue, Ctrl-C to quit)\n",
 				clearScreen, cgroupPath, out, cgroupPath)
+		}
+
+		if terminate {
+			fmt.Printf("Interrupted!\n")
+			break
 		}
 	}
 
