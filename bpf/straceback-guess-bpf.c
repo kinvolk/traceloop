@@ -21,10 +21,10 @@ struct bpf_map_def SEC("maps/guess_status") guess_status = {
 	.namespace = "",
 };
 
-/* This is a key/value store with the keys being the pidns
+/* This is a key/value store with the keys being the utsns
  * and the values being the index of tail_call_enter|exit.
  */
-struct bpf_map_def SEC("maps/pidns_map") pidns_map = {
+struct bpf_map_def SEC("maps/utsns_map") utsns_map = {
 	.type = BPF_MAP_TYPE_HASH,
 	.key_size = sizeof(__u32),
 	.value_size = sizeof(__u32),
@@ -97,8 +97,8 @@ static int are_offsets_ready(struct guess_status_t *status, struct task_struct *
 	printt("offset task - ptracer_cred: %d\n", offsetof(struct task_struct, ptracer_cred));
 	printt("offset task - nsproxy: %d\n", offsetof(struct task_struct, nsproxy));
 	//printt("offset_nsproxy: %d\n", offsetof(struct task_struct, nsproxy));
-	//printt("offset_pidns: %d\n", offsetof(struct nsproxy, pid_ns_for_children));
-	//printt("offset_ino: %d\n", offsetof(struct pid_namespace, ns));
+	//printt("offset_utsns: %d\n", offsetof(struct nsproxy, uts_ns));
+	//printt("offset_ino: %d\n", offsetof(struct uts_namespace, ns));
 	//printt("offset_ino: %d\n", offsetof(struct ns_common, inum));
 
 	struct guess_status_t new_status = { };
@@ -106,37 +106,37 @@ static int are_offsets_ready(struct guess_status_t *status, struct task_struct *
 	new_status.pid_tgid = status->pid_tgid;
 	new_status.what = status->what;
 	new_status.offset_nsproxy = status->offset_nsproxy;
-	new_status.offset_pidns = status->offset_pidns;
+	new_status.offset_utsns = status->offset_utsns;
 	new_status.offset_ino = status->offset_ino;
 	new_status.err = 0;
-	new_status.pidns = status->pidns;
+	new_status.utsns = status->utsns;
 
 	void *possible_nsproxy;		// struct nsproxy
-	void *possible_pid_namespace;	// struct pid_namespace
-	u32 possible_pidns;		// unsigned int
+	void *possible_uts_namespace;	// struct uts_namespace
+	u32 possible_utsns;		// unsigned int
 
 	long ret = 0;
 
 	switch (status->what) {
-		case GUESS_PIDNS:
+		case GUESS_UTSNS:
 			possible_nsproxy = NULL;
-			possible_pid_namespace = NULL;
-			possible_pidns = 0;
+			possible_uts_namespace = NULL;
+			possible_utsns = 0;
 			bpf_probe_read(&possible_nsproxy, sizeof(void *), ((char *)task) + status->offset_nsproxy);
 			// if we get a kernel fault, it means we have
 			// an invalid pointer, signal an error so we can go
 			// to the next offset
-			ret = bpf_probe_read(&possible_pid_namespace, sizeof(void *), ((char *)possible_nsproxy) + status->offset_pidns);
+			ret = bpf_probe_read(&possible_uts_namespace, sizeof(void *), ((char *)possible_nsproxy) + status->offset_utsns);
 			if (ret == -EFAULT) {
 				new_status.err = 2;
 				break;
 			}
-			ret = bpf_probe_read(&possible_pidns, sizeof(possible_pidns), ((char *)possible_pid_namespace) + status->offset_ino);
+			ret = bpf_probe_read(&possible_utsns, sizeof(possible_utsns), ((char *)possible_uts_namespace) + status->offset_ino);
 			if (ret == -EFAULT) {
 				new_status.err = 1;
 				break;
 			}
-			new_status.pidns = possible_pidns;
+			new_status.utsns = possible_utsns;
 			break;
 		default:
 			// not for us
@@ -149,25 +149,25 @@ static int are_offsets_ready(struct guess_status_t *status, struct task_struct *
 }
 
 __attribute__((always_inline))
-static u32 get_pidns(struct guess_status_t *status, struct task_struct *task) {
+static u32 get_utsns(struct guess_status_t *status, struct task_struct *task) {
 	void *nsproxy;		// struct nsproxy
-	void *pid_namespace;	// struct pid_namespace
-	u32 pidns;		// unsigned int
+	void *uts_namespace;	// struct uts_namespace
+	u32 utsns;		// unsigned int
 
 	int ret;
 	ret = bpf_probe_read(&nsproxy, sizeof(void *), ((char *)task) + status->offset_nsproxy);
 	if (ret == -EFAULT || nsproxy == NULL) {
 		return 0;
 	}
-	ret = bpf_probe_read(&pid_namespace, sizeof(void *), ((char *)nsproxy) + status->offset_pidns);
-	if (ret == -EFAULT || pid_namespace == NULL) {
+	ret = bpf_probe_read(&uts_namespace, sizeof(void *), ((char *)nsproxy) + status->offset_utsns);
+	if (ret == -EFAULT || uts_namespace == NULL) {
 		return 0;
 	}
-	ret = bpf_probe_read(&pidns, sizeof(pidns), ((char *)pid_namespace) + status->offset_ino);
+	ret = bpf_probe_read(&utsns, sizeof(utsns), ((char *)uts_namespace) + status->offset_ino);
 	if (ret == -EFAULT) {
 		return 0;
 	}
-	return pidns;
+	return utsns;
 }
 
 struct sys_enter_args {
@@ -183,6 +183,9 @@ struct sys_enter_args {
 // Defined in include/linux/proc_ns.h
 #ifndef PROC_PID_INIT_INO
 #define PROC_PID_INIT_INO 0xEFFFFFFCU
+#endif
+#ifndef PROC_UTS_INIT_INO
+#define PROC_UTS_INIT_INO 0xEFFFFFFEU
 #endif
 
 SEC("tracepoint/raw_syscalls/sys_enter")
@@ -201,22 +204,22 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 		return 0;
 	}
 
-	u32 pidns = get_pidns(status, task);
-	if (pidns == 0 || pidns == PROC_PID_INIT_INO) {
+	u32 utsns = get_utsns(status, task);
+	if (utsns == 0 || utsns == PROC_UTS_INIT_INO) {
 		return 0;
 	}
 	u32 *progIdx;
-	progIdx = bpf_map_lookup_elem(&pidns_map, &pidns);
+	progIdx = bpf_map_lookup_elem(&utsns_map, &utsns);
 	if (progIdx != NULL) {
-		printt("normal tailcall; pidns %u progIdx %d\n", pidns, *progIdx);
+		printt("normal tailcall; utsns %u progIdx %d\n", utsns, *progIdx);
 		bpf_tail_call((void *)ctx, (void *)&tail_call_enter, *progIdx);
 		return 0;
 	}
 
 	// allocate a new prog_idx
-	u32 newProgIdx = pidns % MAX_POOLED_PROGRAMS; // FIXME
-	bpf_map_update_elem(&pidns_map, &pidns, &newProgIdx, BPF_ANY);
-	printt("allocate pidns %u to %d\n", pidns, newProgIdx);
+	u32 newProgIdx = utsns % MAX_POOLED_PROGRAMS; // FIXME
+	bpf_map_update_elem(&utsns_map, &utsns, &newProgIdx, BPF_ANY);
+	printt("allocate utsns %u to %d\n", utsns, newProgIdx);
 	bpf_tail_call((void *)ctx, (void *)&tail_call_enter, newProgIdx);
 	printt("failed to exec tail call\n");
 
@@ -235,20 +238,20 @@ int tracepoint__sys_exit(struct pt_regs *ctx)
 
 	struct task_struct *task = (void *)bpf_get_current_task();
 
-	u32 pidns = get_pidns(status, task);
-	if (pidns == 0 || pidns == PROC_PID_INIT_INO) {
+	u32 utsns = get_utsns(status, task);
+	if (utsns == 0 || utsns == PROC_UTS_INIT_INO) {
 		return 0;
 	}
 	u32 *progIdx;
-	progIdx = bpf_map_lookup_elem(&pidns_map, &pidns);
+	progIdx = bpf_map_lookup_elem(&utsns_map, &utsns);
 	if (progIdx != NULL) {
 		bpf_tail_call(ctx, (void *)&tail_call_exit, *progIdx);
 		return 0;
 	}
 
 	// allocate a new prog_idx
-	//u32 newProgIdx = pidns % 8; // FIXME
-	//bpf_map_update_elem(&pidns_map, &pidns, &newProgIdx, BPF_ANY);
+	//u32 newProgIdx = utsns % 8; // FIXME
+	//bpf_map_update_elem(&utsns_map, &utsns, &newProgIdx, BPF_ANY);
 	//bpf_tail_call((void *)ctx, (void *)&tail_call_exit, newProgIdx);
 
 	return 0;

@@ -3,7 +3,7 @@
 
 #include <linux/types.h>
 
-#define GUESS_PIDNS 0
+#define GUESS_UTSNS 0
 
 #define GUESS_STATE_UNINITIALIZED 0
 #define GUESS_STATE_CHECKING      1
@@ -16,12 +16,12 @@ struct guess_status_t {
 	__u64 pid_tgid;
 	__u64 what;
 	__u64 offset_nsproxy;
-	__u64 offset_pidns;
+	__u64 offset_utsns;
 	__u64 offset_ino;
 
 	__u64 err;
 
-	__u32 pidns;
+	__u32 utsns;
 };
 
 #define MAX_TRACED_PROGRAMS 128

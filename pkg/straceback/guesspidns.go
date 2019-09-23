@@ -21,8 +21,8 @@ const (
 	// When reading kernel structs at different offsets, don't go over that
 	// limit. This is an arbitrary choice to avoid infinite loops.
 	threshold_nsproxy = 2300 // 1856
-	threshold_pidns   = 40   // 32
-	threshold_ino     = 230  // 184 + 16
+	threshold_utsns   = 40   // 32
+	threshold_ino     = 500  // 184 + 16
 )
 
 // These constants should be in sync with the equivalent definitions in the ebpf program.
@@ -42,28 +42,28 @@ var stateString = map[C.__u64]string{
 
 var (
 	OffsetNsproxy uint64
-	OffsetPidns   uint64
+	OffsetUtsns   uint64
 	OffsetIno     uint64
 )
 
 // These constants should be in sync with the equivalent definitions in the ebpf program.
 const (
-	guessPidns C.__u64 = 0
+	guessUtsns C.__u64 = 0
 )
 
 var whatString = map[C.__u64]string{
-	guessPidns: "pid namespace",
+	guessUtsns: "uts namespace",
 }
 
 type fieldValues struct {
-	pidns uint32
+	utsns uint32
 }
 
 var zero uint64
 
-func ownPidNS() (uint64, error) {
+func ownUtsNS() (uint64, error) {
 	var s syscall.Stat_t
-	if err := syscall.Stat("/proc/self/ns/pid", &s); err != nil {
+	if err := syscall.Stat("/proc/self/ns/uts", &s); err != nil {
 		return 0, err
 	}
 	return s.Ino, nil
@@ -87,26 +87,26 @@ func checkAndUpdateCurrentOffset(module *bpflib.Module, mp *bpflib.Map, status *
 	}
 
 	switch status.what {
-	case guessPidns:
-		if status.pidns == C.__u32(expected.pidns) {
+	case guessUtsns:
+		if status.utsns == C.__u32(expected.utsns) {
 			status.state = stateReady
 		} else {
-			// offset_nsproxy -> offset_pidns -> offset_ino
+			// offset_nsproxy -> offset_utsns -> offset_ino
 			if status.err == 0 {
 				status.offset_ino++
 			}
 			if status.err == 1 || status.offset_ino >= threshold_ino {
-				status.offset_pidns++
+				status.offset_utsns++
 				status.offset_ino = 0
 			}
-			if status.err == 2 || status.offset_pidns >= threshold_pidns {
+			if status.err == 2 || status.offset_utsns >= threshold_utsns {
 				status.offset_nsproxy++
-				status.offset_pidns = 0
+				status.offset_utsns = 0
 				status.offset_ino = 0
 			}
 			if status.offset_ino >= threshold_ino {
 				status.offset_ino = 0
-				status.offset_pidns++
+				status.offset_utsns++
 			}
 			status.state = stateChecking
 		}
@@ -123,9 +123,9 @@ func checkAndUpdateCurrentOffset(module *bpflib.Module, mp *bpflib.Map, status *
 }
 
 func guess(m *bpflib.Module) error {
-	currentPidns, err := ownPidNS()
+	currentUtsns, err := ownUtsNS()
 	if err != nil {
-		return fmt.Errorf("error getting current pidns: %v", err)
+		return fmt.Errorf("error getting current utsns: %v", err)
 	}
 
 	mp := m.Map("guess_status")
@@ -154,10 +154,12 @@ func guess(m *bpflib.Module) error {
 	}
 
 	expected := &fieldValues{
-		pidns: uint32(currentPidns),
+		utsns: uint32(currentUtsns),
 	}
 
 	for status.state != stateReady {
+		//fmt.Printf("Trying %+v expected %+v\n", status, expected)
+
 		if err := tryCurrentOffset(m, mp, status, expected); err != nil {
 			return err
 		}
@@ -170,7 +172,7 @@ func guess(m *bpflib.Module) error {
 		// Reading too far away in kernel memory is not a big deal:
 		// probe_kernel_read() handles faults gracefully.
 		if status.offset_nsproxy >= threshold_nsproxy ||
-			status.offset_pidns >= threshold_pidns ||
+			status.offset_utsns >= threshold_utsns ||
 			status.offset_ino >= threshold_ino {
 			return fmt.Errorf("overflow while guessing %v, bailing out", whatString[status.what])
 		}
@@ -179,9 +181,9 @@ func guess(m *bpflib.Module) error {
 	err = m.LookupElement(mp, unsafe.Pointer(&zero), unsafe.Pointer(status))
 	if err == nil && status.state == stateReady {
 		OffsetNsproxy = uint64(status.offset_nsproxy)
-		OffsetPidns = uint64(status.offset_pidns)
+		OffsetUtsns = uint64(status.offset_utsns)
 		OffsetIno = uint64(status.offset_ino)
-		fmt.Printf("offsets: %v %v %v\n", OffsetNsproxy, OffsetPidns, OffsetIno)
+		fmt.Printf("offsets: %v %v %v\n", OffsetNsproxy, OffsetUtsns, OffsetIno)
 	}
 
 	return nil
