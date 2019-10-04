@@ -157,8 +157,26 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 			else
 				sc_cont.length = arg_len;
 
-			if (bpf_probe_read(sc_cont.param, arg_len, (void *)(ctx->args[i]))) {
+			// Call bpf_probe_read() with a constant size to avoid errors on 4.14.137+
+			// invalid stack type R1 off=-304 access_size=0
+			// Possibly related:
+			// https://github.com/torvalds/linux/commit/9fd29c08e52023252f0480ab8f6906a1ecc9a8d5
+			switch (arg_len) {
+			case 0:
 				sc_cont.failed = true;
+				break;
+#define UNROLL_CASE(len) \
+			case (len): \
+				if (bpf_probe_read(sc_cont.param, (len), (void *)(ctx->args[i]))) { \
+					sc_cont.failed = true; \
+				} \
+				break;
+			UNROLL_CASE(1) UNROLL_CASE(2) UNROLL_CASE(3) UNROLL_CASE(4) UNROLL_CASE(5)
+			UNROLL_CASE(6) UNROLL_CASE(7) UNROLL_CASE(8)
+			default:
+				if (bpf_probe_read(sc_cont.param, PARAM_LEN, (void *)(ctx->args[i]))) {
+					sc_cont.failed = true;
+				}
 			}
 			bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc_cont, sizeof(sc_cont));
 		}
@@ -233,8 +251,27 @@ int tracepoint__sys_exit(struct sys_exit_args *ctx)
 				else
 					sc_cont.length = arg_len;
 
-				if (bpf_probe_read(sc_cont.param, arg_len, (void *)(remembered->args[i]))) {
+				// On Linux 4.14.137+, calling bpf_probe_read() with a variable size causes:
+				// "invalid stack type R1 off=-304 access_size=0"
+				// This is fixed on newer kernels.
+				//
+				// I know arg_len is not a volatile but that stops the compiler from
+				// optimising the ifs into one bpf_probe_read call with a variable size.
+				if (arg_len == 0) {
 					sc_cont.failed = true;
+				}
+#define UNROLL_TEST(len) \
+				else if ((volatile __u64)arg_len == (len)) { \
+					if (bpf_probe_read(sc_cont.param, (len), (void *)(remembered->args[i]))) { \
+						sc_cont.failed = true; \
+					} \
+				}
+				UNROLL_TEST(1) UNROLL_TEST(2) UNROLL_TEST(3) UNROLL_TEST(4)
+				UNROLL_TEST(5) UNROLL_TEST(6) UNROLL_TEST(7) UNROLL_TEST(8)
+				else {
+					if (bpf_probe_read(sc_cont.param, PARAM_LEN, (void *)(remembered->args[i]))) {
+						sc_cont.failed = true;
+					}
 				}
 				bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc_cont, sizeof(sc_cont));
 			}
