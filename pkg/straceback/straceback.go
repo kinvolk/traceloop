@@ -141,8 +141,9 @@ func getDummyTracelet(mainProg *bpflib.Module, tailCallEnter *bpflib.Map, tailCa
 
 	sectionParams := make(map[string]bpflib.SectionParams)
 	sectionParams["maps/events"] = bpflib.SectionParams{
-		PerfRingBufferPageCount: 64,
-		PerfRingBufferBackward:  true,
+		PerfRingBufferPageCount:    64,
+		PerfRingBufferBackward:     true,
+		PerfRingBufferOverwritable: true,
 	}
 	err = m.Load(sectionParams)
 	if err != nil {
@@ -218,8 +219,9 @@ func (sb *StraceBack) AddProg(cgroupPath string, description string) (uint32, er
 
 	sectionParams := make(map[string]bpflib.SectionParams)
 	sectionParams["maps/events"] = bpflib.SectionParams{
-		PerfRingBufferPageCount: 64,
-		PerfRingBufferBackward:  true,
+		PerfRingBufferPageCount:    64,
+		PerfRingBufferBackward:     true,
+		PerfRingBufferOverwritable: true,
 	}
 	err = m.Load(sectionParams)
 	if err != nil {
