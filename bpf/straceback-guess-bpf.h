@@ -25,7 +25,22 @@ struct guess_status_t {
 };
 
 #define MAX_TRACED_PROGRAMS 128
-
 #define MAX_POOLED_PROGRAMS 16
+struct queue_avail_progs_t {
+	__u32 indexes[MAX_POOLED_PROGRAMS];
+};
+
+#ifndef TASK_COMM_LEN
+#define TASK_COMM_LEN 16
+#endif
+struct new_container_event_t {
+	__u64 timestamp;
+
+	__u32 idx;
+	__u32 utsns;
+
+	__u64 pid;
+	char comm[TASK_COMM_LEN];
+};
 
 #endif

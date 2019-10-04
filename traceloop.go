@@ -43,16 +43,7 @@ func main() {
 			fmt.Printf("Interrupted!\n")
 			break
 		}
-		for i := 0; i < 16; i++ {
-			fmt.Printf("Program %d\n", i)
-			out, err := t.DumpProg(uint32(i))
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "%v\n", err)
-				os.Exit(1)
-			}
-			fmt.Printf("%s", out)
-		}
-
+		t.DumpAll()
 		os.Exit(0)
 	}
 

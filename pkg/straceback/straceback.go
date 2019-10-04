@@ -28,16 +28,20 @@ type Tracelet struct {
 	lostChan     chan uint64
 	description  string
 	eventBuffer  []Event
+	utsns        uint32
+	comm         string
 }
 
 type StraceBack struct {
-	mainProg      *bpflib.Module
-	cgroupMap     *bpflib.Map
-	tailCallEnter *bpflib.Map
-	tailCallExit  *bpflib.Map
-	syscallsDef   *bpflib.Map
-	tracelets     []*Tracelet
-	stopChan      chan struct{}
+	mainProg              *bpflib.Module
+	cgroupMap             *bpflib.Map
+	tailCallEnter         *bpflib.Map
+	tailCallExit          *bpflib.Map
+	syscallsDef           *bpflib.Map
+	newContainerEventsMap *bpflib.PerfMap
+
+	tracelets []*Tracelet
+	stopChan  chan struct{}
 }
 
 func NewTracer(withPidns bool) (*StraceBack, error) {
@@ -57,7 +61,11 @@ func NewTracer(withPidns bool) (*StraceBack, error) {
 		return nil, fmt.Errorf("BPF not supported")
 	}
 
-	err = m.Load(nil)
+	sectionParams := make(map[string]bpflib.SectionParams)
+	sectionParams["maps/new_container_events"] = bpflib.SectionParams{
+		PerfRingBufferPageCount: 1,
+	}
+	err = m.Load(sectionParams)
 	if err != nil {
 		return nil, err
 	}
@@ -86,11 +94,8 @@ func NewTracer(withPidns bool) (*StraceBack, error) {
 	stopChan := make(chan struct{})
 	t := make([]*Tracelet, C.MaxTracedPrograms)
 
+	var newContainerEventsMap *bpflib.PerfMap
 	if withPidns {
-		err = guess(m)
-		if err != nil {
-			return nil, err
-		}
 		// init tracelet pool
 		for i := 0; i < int(C.MaxPooledPrograms); i++ {
 			t[i], err = getDummyTracelet(m, tailCallEnter, tailCallExit, uint32(i))
@@ -98,16 +103,72 @@ func NewTracer(withPidns bool) (*StraceBack, error) {
 				return nil, err
 			}
 		}
+
+		// init queue map
+		queueAvailProgs := m.Map("queue_avail_progs")
+		var zero uint64 = 0
+		var queue C.struct_queue_avail_progs_t = C.struct_queue_avail_progs_t{}
+		for i := 0; i < int(C.MaxPooledPrograms); i++ {
+			queue.indexes[i] = C.uint(i)
+		}
+		if err := m.UpdateElement(queueAvailProgs, unsafe.Pointer(&zero), unsafe.Pointer(&queue), 0); err != nil {
+			return nil, fmt.Errorf("error updating queue of BPF programs: %v", err)
+		}
+
+		// init new_container_events
+		eventChan := make(chan []byte)
+		lostChan := make(chan uint64)
+		stopChan := make(chan struct{})
+
+		newContainerEventsMap, err = bpflib.InitPerfMap(m, "new_container_events", eventChan, lostChan)
+		if err != nil {
+			return nil, fmt.Errorf("error initializing perf map: %v", err)
+		}
+
+		go func() {
+			for {
+				select {
+				case <-stopChan:
+					// On stop, stopChan will be closed but the other channels will
+					// also be closed shortly after. The select{} has no priorities,
+					// therefore, the "ok" value must be checked below.
+					return
+				case data, ok := <-eventChan:
+					if !ok {
+						return // see explanation above
+					}
+					eventC := (*C.struct_new_container_event_t)(unsafe.Pointer(&(data)[0]))
+					fmt.Printf("New container event: idx=%d utsns=%v %q\n", eventC.idx, eventC.utsns, C.GoString(&eventC.comm[0]))
+					if eventC.idx < C.uint(C.MaxPooledPrograms) {
+						t[eventC.idx].utsns = uint32(eventC.utsns)
+						t[eventC.idx].comm = C.GoString(&eventC.comm[0])
+					}
+				case lost, ok := <-lostChan:
+					if !ok {
+						return // see explanation above
+					}
+					fmt.Printf("Lost data in the newContainerEventsMap: %v\n", lost)
+				}
+			}
+		}()
+		newContainerEventsMap.PollStart()
+
+		// guess
+		err = guess(m)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &StraceBack{
-		mainProg:      m,
-		cgroupMap:     cgroupMap,
-		tailCallEnter: tailCallEnter,
-		tailCallExit:  tailCallExit,
-		syscallsDef:   syscallsDef,
-		tracelets:     t,
-		stopChan:      stopChan,
+		mainProg:              m,
+		cgroupMap:             cgroupMap,
+		tailCallEnter:         tailCallEnter,
+		tailCallExit:          tailCallExit,
+		syscallsDef:           syscallsDef,
+		newContainerEventsMap: newContainerEventsMap,
+		tracelets:             t,
+		stopChan:              stopChan,
 	}, nil
 }
 
@@ -313,6 +374,26 @@ func (sb *StraceBack) DumpProg(id uint32) (out string, err error) {
 	out = eventsToString(sb.tracelets[id].eventBuffer)
 	return
 }
+
+func (sb *StraceBack) DumpAll() (out string, err error) {
+	for i := 0; i < int(C.MaxTracedPrograms); i++ {
+		if sb.tracelets[i] == nil {
+			continue
+		}
+		if sb.tracelets[i].utsns == 0 {
+			continue
+		}
+		fmt.Printf("Program %q: utsns=%v\n", sb.tracelets[i].comm, sb.tracelets[i].utsns)
+		out2, err2 := sb.DumpProg(uint32(i))
+		if err2 != nil {
+			fmt.Printf("%v\n", err)
+			return
+		}
+		fmt.Printf("%s", out2)
+	}
+	return
+}
+
 func (sb *StraceBack) CloseProg(id uint32) (err error) {
 	sb.tracelets[id].tailCallProg.Close()
 	sb.tracelets[id] = nil
@@ -331,6 +412,7 @@ func (sb *StraceBack) CloseProgByName(name string) (err error) {
 
 func (sb *StraceBack) Stop() {
 	close(sb.stopChan)
+	sb.newContainerEventsMap.PollStop()
 	for i, _ := range sb.tracelets {
 		if sb.tracelets[i] != nil {
 			sb.tracelets[i].pm.PollStop()
