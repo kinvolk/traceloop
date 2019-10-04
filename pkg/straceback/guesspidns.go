@@ -138,8 +138,9 @@ func guess(m *bpflib.Module) error {
 	fmt.Printf("pid %v tid %v\n", os.Getpid(), syscall.Gettid())
 
 	status := &guessStatus{
-		state:    stateChecking,
-		pid_tgid: C.__u64(pidTgid),
+		state:          stateChecking,
+		pid_tgid:       C.__u64(pidTgid),
+		offset_nsproxy: 1500,
 	}
 
 	// if we already have the offsets, just return
