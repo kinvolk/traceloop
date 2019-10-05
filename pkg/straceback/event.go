@@ -2,6 +2,7 @@ package straceback
 
 import (
 	"fmt"
+	"syscall"
 	"time"
 	"unsafe"
 )
@@ -47,7 +48,7 @@ func eventToGo(data *[]byte) (ret Event) {
 		if eventContC.failed != 0 {
 			ret.Param = "(Pointer deref failed!)"
 		} else if uint64(eventContC.length) == useNullByteLength {
-		        // 0 byte at [C.PARAM_LENGTH - 1] is enforced in BPF code
+			// 0 byte at [C.PARAM_LENGTH - 1] is enforced in BPF code
 			ret.Param = C.GoString(&eventContC.param[0])
 		} else {
 			ret.Param = C.GoStringN(&eventContC.param[0], C.int(eventContC.length))
@@ -101,6 +102,16 @@ func (e Event) String() string {
 		return fmt.Sprintf("%v cpu#%d pid %d [%s] unknown", e.Timestamp, e.CPU, e.Pid, e.Comm)
 	}
 }
+
+func retToStr(ret uint64) string {
+	errNo := int64(ret)
+	if errNo >= -4095 && errNo <= -1 {
+		return fmt.Sprintf("-1 (%s)", syscall.Errno(-errNo).Error())
+	} else {
+		return fmt.Sprintf("%d", ret)
+	}
+}
+
 func eventsToString(events []Event) (ret string) {
 	for i := 0; i < len(events); i++ {
 		e := events[i]
@@ -121,7 +132,7 @@ func eventsToString(events []Event) (ret string) {
 			if e.Typ == 0 && i+1 < len(events) {
 				nextE := events[i+1]
 				if nextE.Typ == 1 && e.Pid == nextE.Pid && e.ID == nextE.ID {
-					returnedValue = fmt.Sprintf(" = %d", nextE.Ret)
+					returnedValue = fmt.Sprintf(" = %s", retToStr(nextE.Ret))
 					i++
 				}
 			}
@@ -130,7 +141,7 @@ func eventsToString(events []Event) (ret string) {
 				syscallGetCall(int(e.ID), e.Args, &argsStr),
 				returnedValue)
 		case 1:
-			ret += fmt.Sprintf("%v cpu#%d pid %d [%s] ...%s() = %d\n", timeStr, e.CPU, e.Pid, e.Comm, syscallGetName(int(e.ID)), int(e.Ret))
+			ret += fmt.Sprintf("%v cpu#%d pid %d [%s] ...%s() = %s\n", timeStr, e.CPU, e.Pid, e.Comm, syscallGetName(int(e.ID)), retToStr(e.Ret))
 		case 2:
 			ret += fmt.Sprintf("%v %q\n", timeStr, e.Param)
 		default:
