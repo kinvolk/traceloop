@@ -374,5 +374,56 @@ int tracepoint__sys_exit(struct pt_regs *ctx)
 	return 0;
 }
 
+__attribute__((always_inline))
+static u32 get_utsns_from_kprobe(struct guess_status_t *status, void *ns) {
+	u32 utsns;		// unsigned int
+
+	int ret;
+	ret = bpf_probe_read(&utsns, sizeof(utsns), ((char *)ns) + status->offset_ino);
+	if (ret == -EFAULT) {
+		return 0;
+	}
+	return utsns;
+}
+
+SEC("kprobe/free_uts_ns")
+int kprobe__free_uts_ns(struct pt_regs *ctx)
+{
+	void *ns;
+	ns = (void *) PT_REGS_PARM1(ctx);
+
+	struct guess_status_t *status;
+	u64 zero = 0;
+	status = bpf_map_lookup_elem(&guess_status, &zero);
+	if (status == NULL || status->state == GUESS_STATE_UNINITIALIZED) {
+		return 0;
+	}
+
+	u32 utsns = get_utsns_from_kprobe(status, ns);
+
+	struct container_status_t *container_status;
+	container_status = bpf_map_lookup_elem(&utsns_map, &utsns);
+	if (container_status == NULL) {
+		return 0;
+	}
+
+	// notify userspace of the deleted container
+	u64 ts = bpf_ktime_get_ns();
+	struct container_event_t ev = {
+		.timestamp = ts,
+		.typ = CONTAINER_EVENT_TYPE_DELETE,
+		.idx = container_status->idx,
+		.utsns = utsns,
+	};
+	bpf_perf_event_output(ctx, &container_events, BPF_F_CURRENT_CPU, &ev, sizeof(ev));
+
+	return 0;
+}
+
+
 char _license[] SEC("license") = "GPL";
+
+// this number will be interpreted by gobpf-elf-loader to set the current
+// running kernel version
+__u32 _version SEC("version") = 0xFFFFFFFE;
 

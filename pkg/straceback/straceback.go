@@ -3,9 +3,13 @@ package straceback
 import (
 	"bytes"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"unsafe"
 
 	bpflib "github.com/iovisor/gobpf/elf"
+
+	"github.com/kinvolk/traceloop/pkg/podinformer"
 )
 
 /*
@@ -13,6 +17,9 @@ import (
 
 const int MaxTracedPrograms = MAX_TRACED_PROGRAMS;
 const int MaxPooledPrograms = MAX_POOLED_PROGRAMS;
+const unsigned char ContainerEventTypeCreate = CONTAINER_EVENT_TYPE_CREATE;
+const unsigned char ContainerEventTypeUpdate = CONTAINER_EVENT_TYPE_UPDATE;
+const unsigned char ContainerEventTypeDelete = CONTAINER_EVENT_TYPE_DELETE;
 */
 import "C"
 
@@ -96,6 +103,9 @@ func NewTracer(withPidns bool) (*StraceBack, error) {
 
 	var newContainerEventsMap *bpflib.PerfMap
 	if withPidns {
+		// start pod informer
+		podInformer, _ := podinformer.NewPodInformer()
+
 		// init tracelet pool
 		for i := 0; i < int(C.MaxPooledPrograms); i++ {
 			t[i], err = getDummyTracelet(m, tailCallEnter, tailCallExit, uint32(i))
@@ -138,13 +148,28 @@ func NewTracer(withPidns bool) (*StraceBack, error) {
 						return // see explanation above
 					}
 					eventC := (*C.struct_container_event_t)(unsafe.Pointer(&(data)[0]))
+
+					containerID := C.GoString(&eventC.param[0])
+					containerID = filepath.Base(containerID)
+					containerID = strings.TrimSuffix(containerID, ".scope")
+					if len(containerID) >= 64 {
+						containerID = "docker://" + containerID[len(containerID)-64:]
+					} else {
+						containerID = ""
+					}
+
 					fmt.Printf("New container event: type %d: utsns %v assigned to slot %d (%q, pid: %v, tid: %v)\n",
 						eventC.typ, eventC.utsns, eventC.idx, C.GoString(&eventC.comm[0]),
 						eventC.pid>>32, eventC.pid&0xFFFFFFFF)
-					fmt.Printf("Cgroup: %s\n", C.GoString(&eventC.param[0]))
+					fmt.Printf("    %s\n", containerID)
 					if eventC.idx < C.uint(C.MaxPooledPrograms) {
 						t[eventC.idx].utsns = uint32(eventC.utsns)
 						t[eventC.idx].comm = C.GoString(&eventC.comm[0])
+					}
+					if eventC.typ == C.ContainerEventTypeUpdate && containerID != "" {
+						podInformer.OnSlotClaimed(int(eventC.idx), containerID)
+					} else if eventC.typ == C.ContainerEventTypeDelete {
+						podInformer.OnSlotFinished(int(eventC.idx))
 					}
 				case lost, ok := <-lostChan:
 					if !ok {
@@ -155,6 +180,12 @@ func NewTracer(withPidns bool) (*StraceBack, error) {
 			}
 		}()
 		newContainerEventsMap.PollStart()
+
+		// kprobe on free_uts_ns
+		err = m.EnableKprobe("kprobe/free_uts_ns", 8)
+		if err != nil {
+			return nil, err
+		}
 
 		// guess
 		err = guess(m)
