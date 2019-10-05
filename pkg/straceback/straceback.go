@@ -49,6 +49,8 @@ type StraceBack struct {
 
 	tracelets []*Tracelet
 	stopChan  chan struct{}
+
+	podInformer *podinformer.PodInformer
 }
 
 func NewTracer(withPidns bool) (*StraceBack, error) {
@@ -101,10 +103,14 @@ func NewTracer(withPidns bool) (*StraceBack, error) {
 	stopChan := make(chan struct{})
 	t := make([]*Tracelet, C.MaxTracedPrograms)
 
-	var newContainerEventsMap *bpflib.PerfMap
+	var (
+		newContainerEventsMap *bpflib.PerfMap
+		podInformer           *podinformer.PodInformer
+	)
+
 	if withPidns {
 		// start pod informer
-		podInformer, _ := podinformer.NewPodInformer()
+		podInformer, _ = podinformer.NewPodInformer()
 
 		// init tracelet pool
 		for i := 0; i < int(C.MaxPooledPrograms); i++ {
@@ -162,14 +168,18 @@ func NewTracer(withPidns bool) (*StraceBack, error) {
 						eventC.typ, eventC.utsns, eventC.idx, C.GoString(&eventC.comm[0]),
 						eventC.pid>>32, eventC.pid&0xFFFFFFFF)
 					fmt.Printf("    %s\n", containerID)
+
 					if eventC.idx < C.uint(C.MaxPooledPrograms) {
 						t[eventC.idx].utsns = uint32(eventC.utsns)
 						t[eventC.idx].comm = C.GoString(&eventC.comm[0])
 					}
-					if eventC.typ == C.ContainerEventTypeUpdate && containerID != "" {
-						podInformer.OnSlotClaimed(int(eventC.idx), containerID)
-					} else if eventC.typ == C.ContainerEventTypeDelete {
-						podInformer.OnSlotFinished(int(eventC.idx))
+
+					if podInformer != nil {
+						if eventC.typ == C.ContainerEventTypeUpdate && containerID != "" {
+							podInformer.OnSlotClaimed(int(eventC.idx), containerID)
+						} else if eventC.typ == C.ContainerEventTypeDelete {
+							podInformer.OnSlotFinished(int(eventC.idx))
+						}
 					}
 				case lost, ok := <-lostChan:
 					if !ok {
@@ -203,6 +213,7 @@ func NewTracer(withPidns bool) (*StraceBack, error) {
 		newContainerEventsMap: newContainerEventsMap,
 		tracelets:             t,
 		stopChan:              stopChan,
+		podInformer:           podInformer,
 	}, nil
 }
 
@@ -425,6 +436,19 @@ func (sb *StraceBack) DumpAll() (out string, err error) {
 		}
 		fmt.Printf("%s", out2)
 	}
+	return
+}
+
+func (sb *StraceBack) DumpPod(namespace, podname string, containerIndex int) (out string, err error) {
+	if sb.podInformer == nil {
+		return "", fmt.Errorf("no pod informer")
+	}
+
+	slot, err2 := sb.podInformer.GetSlotfromPod(namespace, podname, containerIndex)
+	if err2 != nil {
+		return "", err2
+	}
+	out, err = sb.DumpProg(uint32(slot))
 	return
 }
 

@@ -45,11 +45,14 @@ import (
 )
 
 type PodInformer struct {
-	indexer      cache.Indexer
-	queue        workqueue.RateLimitingInterface
-	informer     cache.Controller
-	containerIDs map[string][]string
-	stop         chan struct{}
+	indexer  cache.Indexer
+	queue    workqueue.RateLimitingInterface
+	informer cache.Controller
+
+	stop chan struct{}
+
+	slotByContainerID map[string]int
+	containerIDsByKey map[string][]string
 }
 
 func NewPodInformer() (*PodInformer, error) {
@@ -94,10 +97,12 @@ func NewPodInformer() (*PodInformer, error) {
 	}, cache.Indexers{})
 
 	p := &PodInformer{
-		indexer:  indexer,
-		queue:    queue,
-		informer: informer,
-		stop:     make(chan struct{}),
+		indexer:           indexer,
+		queue:             queue,
+		informer:          informer,
+		stop:              make(chan struct{}),
+		slotByContainerID: make(map[string]int),
+		containerIDsByKey: make(map[string][]string),
 	}
 
 	// Now let's start the controller
@@ -108,10 +113,34 @@ func NewPodInformer() (*PodInformer, error) {
 
 func (p *PodInformer) OnSlotClaimed(slot int, containerID string) {
 	fmt.Printf("OnSlotClaimed: %v %v\n", slot, containerID)
+	p.slotByContainerID[containerID] = slot
 }
 
 func (p *PodInformer) OnSlotFinished(slot int) {
 	fmt.Printf("OnSlotFinished: %v\n", slot)
+	for key := range p.slotByContainerID {
+		if p.slotByContainerID[key] == slot {
+			delete(p.slotByContainerID, key)
+		}
+	}
+}
+
+func (p *PodInformer) GetSlotfromPod(namespace, podname string, containerIndex int) (int, error) {
+	// See cache.MetaNamespaceKeyFunc()
+	key := namespace + "/" + podname
+	arr, ok := p.containerIDsByKey[key]
+	if !ok {
+		return -1, fmt.Errorf("pod %s not found", key)
+	}
+	if len(arr) <= containerIndex {
+		return -1, fmt.Errorf("container #%d not found in pod %s", containerIndex, key)
+	}
+	containerID := arr[containerIndex]
+	slot, ok := p.slotByContainerID[containerID]
+	if !ok {
+		return -1, fmt.Errorf("no logs for container %s in pod %s", containerID, key)
+	}
+	return slot, nil
 }
 
 func (p *PodInformer) Stop() {
@@ -149,6 +178,7 @@ func (p *PodInformer) syncToStdout(key string) error {
 	if !exists {
 		// Below we will warm up our cache with a Pod, so that we will see a delete for one pod
 		fmt.Printf("Pod %s does not exist anymore\n", key)
+		delete(p.containerIDsByKey, key)
 	} else {
 		// Note that you also have to check the uid if you have a local controlled resource, which
 		// is dependent on the actual instance, to detect that a Pod was recreated with the same name
@@ -156,6 +186,7 @@ func (p *PodInformer) syncToStdout(key string) error {
 			obj.(*v1.Pod).GetNamespace(), obj.(*v1.Pod).GetName())
 		for _, s := range obj.(*v1.Pod).Status.ContainerStatuses {
 			fmt.Printf("    %s\n", s.ContainerID)
+			p.containerIDsByKey[key] = append(p.containerIDsByKey[key], s.ContainerID)
 		}
 	}
 	return nil
