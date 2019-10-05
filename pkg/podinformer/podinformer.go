@@ -118,11 +118,14 @@ func (p *PodInformer) OnSlotClaimed(slot int, containerID string) {
 
 func (p *PodInformer) OnSlotFinished(slot int) {
 	fmt.Printf("OnSlotFinished: %v\n", slot)
-	for key := range p.slotByContainerID {
-		if p.slotByContainerID[key] == slot {
-			delete(p.slotByContainerID, key)
-		}
-	}
+
+	// TODO: add a timer
+
+	//for key := range p.slotByContainerID {
+	//	if p.slotByContainerID[key] == slot {
+	//		delete(p.slotByContainerID, key)
+	//	}
+	//}
 }
 
 func (p *PodInformer) GetSlotfromPod(namespace, podname string, containerIndex int) (int, error) {
@@ -141,6 +144,31 @@ func (p *PodInformer) GetSlotfromPod(namespace, podname string, containerIndex i
 		return -1, fmt.Errorf("no logs for container %s in pod %s", containerID, key)
 	}
 	return slot, nil
+}
+
+func (p *PodInformer) GetSlotDescription(slot int) (namespace, podname string, containerIndex int, err error) {
+	var containerID string
+	for cid, s := range p.slotByContainerID {
+		if s == slot {
+			containerID = cid
+			break
+		}
+	}
+	if containerID == "" {
+		return "", "", -1, fmt.Errorf("no containerID for slot #%d", slot)
+	}
+	for k, cids := range p.containerIDsByKey {
+		ns, n, err2 := cache.SplitMetaNamespaceKey(k)
+		if err2 != nil {
+			return "", "", -1, err2
+		}
+		for i, cid := range cids {
+			if cid == containerID {
+				return ns, n, i, nil
+			}
+		}
+	}
+	return "", "", -1, fmt.Errorf("slot #%d not found", slot)
 }
 
 func (p *PodInformer) Stop() {
@@ -184,6 +212,7 @@ func (p *PodInformer) syncToStdout(key string) error {
 		// is dependent on the actual instance, to detect that a Pod was recreated with the same name
 		fmt.Printf("Sync/Add/Update for Pod %s %s:\n",
 			obj.(*v1.Pod).GetNamespace(), obj.(*v1.Pod).GetName())
+		p.containerIDsByKey[key] = nil
 		for _, s := range obj.(*v1.Pod).Status.ContainerStatuses {
 			fmt.Printf("    %s\n", s.ContainerID)
 			p.containerIDsByKey[key] = append(p.containerIDsByKey[key], s.ContainerID)

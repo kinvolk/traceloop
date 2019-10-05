@@ -222,7 +222,16 @@ func (sb *StraceBack) List() (out string) {
 		if sb.tracelets[i] == nil {
 			continue
 		}
-		out += fmt.Sprintf("%d: [%s] %s\n", i, sb.tracelets[i].description, sb.tracelets[i].cgroupPath)
+		if sb.podInformer != nil {
+			namespace, podname, containerIndex, err := sb.podInformer.GetSlotDescription(i)
+			if err == nil {
+				out += fmt.Sprintf("%d: %s/%s #%d\n", i, namespace, podname, containerIndex)
+			} else {
+				out += fmt.Sprintf("%d: error: %s\n", i, err)
+			}
+		} else {
+			out += fmt.Sprintf("%d: [%s] %s\n", i, sb.tracelets[i].description, sb.tracelets[i].cgroupPath)
+		}
 	}
 	return
 }
