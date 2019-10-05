@@ -20,7 +20,7 @@ type guessStatus C.struct_guess_status_t
 const (
 	// When reading kernel structs at different offsets, don't go over that
 	// limit. This is an arbitrary choice to avoid infinite loops.
-	threshold_nsproxy = 2300 // 1856
+	threshold_nsproxy = 2500 // 1856
 	threshold_utsns   = 40   // 32
 	threshold_ino     = 500  // 184 + 16
 )

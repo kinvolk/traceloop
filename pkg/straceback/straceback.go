@@ -62,7 +62,7 @@ func NewTracer(withPidns bool) (*StraceBack, error) {
 	}
 
 	sectionParams := make(map[string]bpflib.SectionParams)
-	sectionParams["maps/new_container_events"] = bpflib.SectionParams{
+	sectionParams["maps/container_events"] = bpflib.SectionParams{
 		PerfRingBufferPageCount: 1,
 	}
 	err = m.Load(sectionParams)
@@ -115,12 +115,12 @@ func NewTracer(withPidns bool) (*StraceBack, error) {
 			return nil, fmt.Errorf("error updating queue of BPF programs: %v", err)
 		}
 
-		// init new_container_events
+		// init container_events
 		eventChan := make(chan []byte)
 		lostChan := make(chan uint64)
 		stopChan := make(chan struct{})
 
-		newContainerEventsMap, err = bpflib.InitPerfMap(m, "new_container_events", eventChan, lostChan)
+		newContainerEventsMap, err = bpflib.InitPerfMap(m, "container_events", eventChan, lostChan)
 		if err != nil {
 			return nil, fmt.Errorf("error initializing perf map: %v", err)
 		}
@@ -137,8 +137,11 @@ func NewTracer(withPidns bool) (*StraceBack, error) {
 					if !ok {
 						return // see explanation above
 					}
-					eventC := (*C.struct_new_container_event_t)(unsafe.Pointer(&(data)[0]))
-					fmt.Printf("New container event: idx=%d utsns=%v %q\n", eventC.idx, eventC.utsns, C.GoString(&eventC.comm[0]))
+					eventC := (*C.struct_container_event_t)(unsafe.Pointer(&(data)[0]))
+					fmt.Printf("New container event: type %d: utsns %v assigned to slot %d (%q, pid: %v, tid: %v)\n",
+						eventC.typ, eventC.utsns, eventC.idx, C.GoString(&eventC.comm[0]),
+						eventC.pid>>32, eventC.pid&0xFFFFFFFF)
+					fmt.Printf("Cgroup: %s\n", C.GoString(&eventC.param[0]))
 					if eventC.idx < C.uint(C.MaxPooledPrograms) {
 						t[eventC.idx].utsns = uint32(eventC.utsns)
 						t[eventC.idx].comm = C.GoString(&eventC.comm[0])

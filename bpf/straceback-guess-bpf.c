@@ -47,7 +47,7 @@ struct bpf_map_def SEC("maps/queue_avail_progs") queue_avail_progs = {
  * Whenever a new container is detected, a program is allocated for it and
  * userspace is signalled via this perf ring buffer.
  */
-struct bpf_map_def SEC("maps/new_container_events") new_container_events = {
+struct bpf_map_def SEC("maps/container_events") container_events = {
 	.type = BPF_MAP_TYPE_PERF_EVENT_ARRAY,
 	.key_size = sizeof(int),
 	.value_size = sizeof(__u32),
@@ -63,7 +63,7 @@ struct bpf_map_def SEC("maps/new_container_events") new_container_events = {
 struct bpf_map_def SEC("maps/utsns_map") utsns_map = {
 	.type = BPF_MAP_TYPE_HASH,
 	.key_size = sizeof(__u32),
-	.value_size = sizeof(__u32),
+	.value_size = sizeof(struct container_status_t),
 	.max_entries = MAX_TRACED_PROGRAMS,
 	.pinning = 0,
 	.namespace = "",
@@ -217,12 +217,45 @@ struct sys_enter_args {
 };
 
 __attribute__((always_inline))
-static u32 find_prog_idx(void *ctx, u64 pid, u32 utsns) {
-	u32 *progIdx;
-	progIdx = bpf_map_lookup_elem(&utsns_map, &utsns);
-	if (progIdx != NULL) {
-		// Program already installed. Use it.
-		return *progIdx;
+static u32 find_prog_idx(void *ctx, u64 pid, u32 utsns, long id, int exit) {
+	struct container_status_t *status;
+	status = bpf_map_lookup_elem(&utsns_map, &utsns);
+	if (status != NULL) {
+		if (status->status == CONTAINER_STATUS_READY) {
+			// Program already installed. Use it.
+			return status->idx;
+		} else if (status->status == CONTAINER_STATUS_WAITING) {
+			if (exit != 0 && id != 165) { // mount
+				return 0xFFFFFFFF;
+			}
+			u64 ts = bpf_ktime_get_ns();
+			struct container_event_t ev = {
+				.timestamp = ts,
+				.typ = CONTAINER_EVENT_TYPE_UPDATE,
+				.pid = pid,
+				.idx = status->idx,
+				.utsns = utsns,
+			};
+			bpf_get_current_comm(ev.comm, sizeof(ev.comm));
+			if (ev.comm[0] != 'r' || ev.comm[1] != 'u' ||
+			    ev.comm[2] != 'n' || ev.comm[3] != 'c') {
+				return 0xFFFFFFFF;
+			}
+			void *param1 = (void *)(((struct sys_enter_args *) ctx)->args[0]);
+			bpf_probe_read(ev.param, 256, param1);
+			if (ev.param[0] != '/'  || ev.param[1] != 's'  || ev.param[2] != 'y'  || ev.param[3] != 's'  ||
+			    ev.param[4] != '/'  || ev.param[5] != 'f'  || ev.param[6] != 's'  || ev.param[7] != '/'  ||
+			    ev.param[8] != 'c'  || ev.param[9] != 'g'  || ev.param[10] != 'r' || ev.param[11] != 'o' ||
+			    ev.param[12] != 'u' || ev.param[13] != 'p' || ev.param[14] != '/' || ev.param[15] != 's' ||
+			    ev.param[16] != 'y' || ev.param[17] != 's' || ev.param[18] != 't' || ev.param[19] != 'e' ||
+			    ev.param[20] != 'm' || ev.param[21] != 'd' || ev.param[22] != '/') {
+				return 0xFFFFFFFF;
+			}
+			bpf_perf_event_output(ctx, &container_events, BPF_F_CURRENT_CPU, &ev, sizeof(ev));
+
+			status->status = CONTAINER_STATUS_READY;
+			return 0xFFFFFFFF;
+		}
 	}
 
 	// allocate a new prog_idx
@@ -237,9 +270,13 @@ static u32 find_prog_idx(void *ctx, u64 pid, u32 utsns) {
 	// pick the top item from the queue
 	u32 newProgIdx = queue->indexes[0];
 	if (newProgIdx >= MAX_POOLED_PROGRAMS) {
-		printt("queue_avail_progs does not have anything to use?\n");
+		printt("queue_avail_progs does not have anything to use? %d\n", newProgIdx);
 		return 0xFFFFFFFF;
 	}
+
+	// assign idx for the utsns
+	struct container_status_t new_status = {newProgIdx, CONTAINER_STATUS_WAITING};
+	bpf_map_update_elem(&utsns_map, &utsns, &new_status, BPF_ANY);
 
 	// shift the queue
 	int i;
@@ -251,18 +288,17 @@ static u32 find_prog_idx(void *ctx, u64 pid, u32 utsns) {
 
 	// notify userspace of the new container
 	u64 ts = bpf_ktime_get_ns();
-	struct new_container_event_t ev = {
+	struct container_event_t ev = {
 		.timestamp = ts,
+		.typ = CONTAINER_EVENT_TYPE_CREATE,
 		.pid = pid,
 		.idx = newProgIdx,
 		.utsns = utsns,
 	};
 	bpf_get_current_comm(ev.comm, sizeof(ev.comm));
-	bpf_perf_event_output(ctx, &new_container_events, BPF_F_CURRENT_CPU, &ev, sizeof(ev));
+	bpf_perf_event_output(ctx, &container_events, BPF_F_CURRENT_CPU, &ev, sizeof(ev));
 
-	// assign idx for the utsns
-	bpf_map_update_elem(&utsns_map, &utsns, &newProgIdx, BPF_ANY);
-	printt("allocate utsns %u to %d\n", utsns, newProgIdx);
+	printt("allocate utsns %u to %d [%d]\n", utsns, newProgIdx, exit);
 
 	return newProgIdx;
 }
@@ -296,7 +332,7 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 		return 0;
 	}
 
-	u32 progIdx = find_prog_idx(ctx, pid, utsns);
+	u32 progIdx = find_prog_idx(ctx, pid, utsns, ctx->id, 0);
 	if (progIdx >= MAX_TRACED_PROGRAMS) {
 		// Couldn't find a suitable slot
 		return 0;
@@ -326,7 +362,7 @@ int tracepoint__sys_exit(struct pt_regs *ctx)
 	}
 
 	u64 pid = bpf_get_current_pid_tgid();
-	u32 progIdx = find_prog_idx(ctx, pid, utsns);
+	u32 progIdx = find_prog_idx(ctx, pid, utsns, 0, 1);
 	if (progIdx >= MAX_TRACED_PROGRAMS) {
 		// Couldn't find a suitable slot
 		return 0;

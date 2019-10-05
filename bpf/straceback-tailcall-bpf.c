@@ -280,6 +280,7 @@ int tracepoint__sys_exit(struct sys_exit_args *ctx)
 	}
 
 	bpf_get_current_comm(sc.comm, sizeof(sc.comm));
+
 	bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc, sizeof(sc));
 
 	return 0;
