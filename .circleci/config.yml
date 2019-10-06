@@ -6,16 +6,24 @@ jobs:
    working_directory: /go/src/github.com/kinvolk/traceloop
    steps:
      - checkout
+
+     - restore_cache:
+         keys:
+           - go-mod-v1-{{ checksum "go.sum" }}
+
      - setup_remote_docker:
          docker_layer_caching: true
 
-     # start proprietary DB using private Docker image
-     # with credentials stored in the UI
      - run: |
          echo "$DOCKER_PASS" | docker login --username $DOCKER_USER --password-stdin
 
      # build the application image
      - run: make all DOCKER_TAG=$CIRCLE_BRANCH
+
+     - save_cache:
+         key: go-mod-v1-{{ checksum "go.sum" }}
+         paths:
+           - "/go/pkg/mod"
 
      # deploy the image
      - run: make docker/push DOCKER_TAG=$CIRCLE_BRANCH
