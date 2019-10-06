@@ -29,7 +29,7 @@ var (
 )
 
 func init() {
-	err := gatherSyscalls()
+	err := gatherSyscallsStatic()
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		os.Exit(1)
