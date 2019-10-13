@@ -25,6 +25,33 @@ import "C"
 
 const maxEvents = 4000
 
+type traceletStatus int
+
+const (
+	traceletStatusManual traceletStatus = iota
+	traceletStatusUnused
+	traceletStatusCreated
+	traceletStatusReady
+	traceletStatusDeleted
+)
+
+func (s traceletStatus) String() string {
+	switch s {
+	case traceletStatusManual:
+		return "manual"
+	case traceletStatusUnused:
+		return "unused"
+	case traceletStatusCreated:
+		return "created"
+	case traceletStatusReady:
+		return "ready"
+	case traceletStatusDeleted:
+		return "deleted"
+	default:
+		return "unknown"
+	}
+}
+
 type Tracelet struct {
 	tailCallProg *bpflib.Module
 	pm           *bpflib.PerfMap
@@ -39,6 +66,7 @@ type Tracelet struct {
 	pid          uint64
 	comm         string
 	containerID  string
+	status       traceletStatus
 }
 
 type StraceBack struct {
@@ -178,10 +206,12 @@ func NewTracer(withPidns bool) (*StraceBack, error) {
 						if podInformer != nil {
 							if eventC.typ == C.ContainerEventTypeCreate {
 								t[eventC.idx].pid = uint64(eventC.pid)
+								t[eventC.idx].status = traceletStatusCreated
 							} else if eventC.typ == C.ContainerEventTypeUpdate && containerID != "" {
 								t[eventC.idx].containerID = containerID
+								t[eventC.idx].status = traceletStatusReady
 							} else if eventC.typ == C.ContainerEventTypeDelete {
-								// TODO
+								t[eventC.idx].status = traceletStatusDeleted
 							}
 						}
 					}
@@ -228,6 +258,7 @@ func (sb *StraceBack) List() (out string) {
 			continue
 		}
 		if sb.podInformer != nil {
+			out += fmt.Sprintf("[%s] ", sb.tracelets[i].status)
 			if sb.tracelets[i].containerID == "" {
 				out += fmt.Sprintf("%d: trace not assigned to any container (%q, pid %d)\n",
 					i, sb.tracelets[i].comm, sb.tracelets[i].pid>>32)
@@ -251,6 +282,7 @@ func getDummyTracelet(mainProg *bpflib.Module, tailCallEnter *bpflib.Map, tailCa
 	tracelet := Tracelet{
 		eventChan: make(chan []byte),
 		lostChan:  make(chan uint64),
+		status:    traceletStatusUnused,
 	}
 
 	buf, err := Asset("straceback-tailcall-bpf.o")
@@ -329,6 +361,7 @@ func (sb *StraceBack) AddProg(cgroupPath string, description string) (uint32, er
 		cgroupId:    cgroupId,
 		eventChan:   make(chan []byte),
 		lostChan:    make(chan uint64),
+		status:      traceletStatusManual,
 	}
 
 	buf, err := Asset("straceback-tailcall-bpf.o")
