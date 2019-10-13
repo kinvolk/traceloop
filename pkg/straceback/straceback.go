@@ -36,7 +36,9 @@ type Tracelet struct {
 	description  string
 	eventBuffer  []Event
 	utsns        uint32
+	pid          uint64
 	comm         string
+	containerID  string
 }
 
 type StraceBack struct {
@@ -172,15 +174,18 @@ func NewTracer(withPidns bool) (*StraceBack, error) {
 					if eventC.idx < C.uint(C.MaxPooledPrograms) {
 						t[eventC.idx].utsns = uint32(eventC.utsns)
 						t[eventC.idx].comm = C.GoString(&eventC.comm[0])
-					}
 
-					if podInformer != nil {
-						if eventC.typ == C.ContainerEventTypeUpdate && containerID != "" {
-							podInformer.OnSlotClaimed(int(eventC.idx), containerID)
-						} else if eventC.typ == C.ContainerEventTypeDelete {
-							podInformer.OnSlotFinished(int(eventC.idx))
+						if podInformer != nil {
+							if eventC.typ == C.ContainerEventTypeCreate {
+								t[eventC.idx].pid = uint64(eventC.pid)
+							} else if eventC.typ == C.ContainerEventTypeUpdate && containerID != "" {
+								t[eventC.idx].containerID = containerID
+							} else if eventC.typ == C.ContainerEventTypeDelete {
+								// TODO
+							}
 						}
 					}
+
 				case lost, ok := <-lostChan:
 					if !ok {
 						return // see explanation above
@@ -223,7 +228,13 @@ func (sb *StraceBack) List() (out string) {
 			continue
 		}
 		if sb.podInformer != nil {
-			namespace, podname, containerIndex, err := sb.podInformer.GetSlotDescription(i)
+			if sb.tracelets[i].containerID == "" {
+				out += fmt.Sprintf("%d: trace not assigned to any container (%q, pid %d)\n",
+					i, sb.tracelets[i].comm, sb.tracelets[i].pid>>32)
+				continue
+			}
+
+			namespace, podname, containerIndex, err := sb.podInformer.GetPodFromContainerID(sb.tracelets[i].containerID)
 			if err == nil {
 				out += fmt.Sprintf("%d: %s/%s #%d\n", i, namespace, podname, containerIndex)
 			} else {
@@ -453,12 +464,21 @@ func (sb *StraceBack) DumpPod(namespace, podname string, containerIndex int) (ou
 		return "", fmt.Errorf("no pod informer")
 	}
 
-	slot, err2 := sb.podInformer.GetSlotfromPod(namespace, podname, containerIndex)
+	containerID, err2 := sb.podInformer.GetContainerIDFromPod(namespace, podname, containerIndex)
 	if err2 != nil {
 		return "", err2
 	}
-	out, err = sb.DumpProg(uint32(slot))
-	return
+
+	for i := 0; i < int(C.MaxTracedPrograms); i++ {
+		if sb.tracelets[i] == nil {
+			continue
+		}
+		if sb.tracelets[i].containerID == containerID {
+			out, err = sb.DumpProg(uint32(i))
+			return
+		}
+	}
+	return "", fmt.Errorf("cannot find trace #%d for pod %s/%s", containerIndex, namespace, podname)
 }
 
 func (sb *StraceBack) CloseProg(id uint32) (err error) {

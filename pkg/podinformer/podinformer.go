@@ -51,7 +51,9 @@ type PodInformer struct {
 
 	stop chan struct{}
 
-	slotByContainerID map[string]int
+	// containerIDsByKey is a map maintained by the controller
+	// key is "namespace/podname"
+	// value is an array of containerId
 	containerIDsByKey map[string][]string
 }
 
@@ -101,7 +103,6 @@ func NewPodInformer() (*PodInformer, error) {
 		queue:             queue,
 		informer:          informer,
 		stop:              make(chan struct{}),
-		slotByContainerID: make(map[string]int),
 		containerIDsByKey: make(map[string][]string),
 	}
 
@@ -111,52 +112,21 @@ func NewPodInformer() (*PodInformer, error) {
 	return p, nil
 }
 
-func (p *PodInformer) OnSlotClaimed(slot int, containerID string) {
-	fmt.Printf("OnSlotClaimed: %v %v\n", slot, containerID)
-	p.slotByContainerID[containerID] = slot
-}
-
-func (p *PodInformer) OnSlotFinished(slot int) {
-	fmt.Printf("OnSlotFinished: %v\n", slot)
-
-	// TODO: add a timer
-
-	//for key := range p.slotByContainerID {
-	//	if p.slotByContainerID[key] == slot {
-	//		delete(p.slotByContainerID, key)
-	//	}
-	//}
-}
-
-func (p *PodInformer) GetSlotfromPod(namespace, podname string, containerIndex int) (int, error) {
+func (p *PodInformer) GetContainerIDFromPod(namespace, podname string, containerIndex int) (string, error) {
 	// See cache.MetaNamespaceKeyFunc()
 	key := namespace + "/" + podname
 	arr, ok := p.containerIDsByKey[key]
 	if !ok {
-		return -1, fmt.Errorf("pod %s not found", key)
+		return "", fmt.Errorf("pod %s not found", key)
 	}
 	if len(arr) <= containerIndex {
-		return -1, fmt.Errorf("container #%d not found in pod %s", containerIndex, key)
+		return "", fmt.Errorf("container #%d not found in pod %s", containerIndex, key)
 	}
 	containerID := arr[containerIndex]
-	slot, ok := p.slotByContainerID[containerID]
-	if !ok {
-		return -1, fmt.Errorf("no logs for container %s in pod %s", containerID, key)
-	}
-	return slot, nil
+	return containerID, nil
 }
 
-func (p *PodInformer) GetSlotDescription(slot int) (namespace, podname string, containerIndex int, err error) {
-	var containerID string
-	for cid, s := range p.slotByContainerID {
-		if s == slot {
-			containerID = cid
-			break
-		}
-	}
-	if containerID == "" {
-		return "", "", -1, fmt.Errorf("no containerID for slot #%d", slot)
-	}
+func (p *PodInformer) GetPodFromContainerID(containerID string) (namespace, podname string, containerIndex int, err error) {
 	for k, cids := range p.containerIDsByKey {
 		ns, n, err2 := cache.SplitMetaNamespaceKey(k)
 		if err2 != nil {
@@ -168,7 +138,7 @@ func (p *PodInformer) GetSlotDescription(slot int) (namespace, podname string, c
 			}
 		}
 	}
-	return "", "", -1, fmt.Errorf("slot #%d not found", slot)
+	return "", "", -1, fmt.Errorf("container not found for %q", containerID)
 }
 
 func (p *PodInformer) Stop() {
