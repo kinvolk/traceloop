@@ -44,12 +44,22 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 )
 
+type ContainerInfo struct {
+	UID         string
+	Namespace   string
+	Podname     string
+	Idx         int
+	ContainerID string
+	Deleted     bool
+}
+
 type PodInformer struct {
 	indexer  cache.Indexer
 	queue    workqueue.RateLimitingInterface
 	informer cache.Controller
 
-	stop chan struct{}
+	stop            chan struct{}
+	podInformerChan chan ContainerInfo
 
 	// containerIDsByKey is a map maintained by the controller
 	// key is "namespace/podname"
@@ -57,7 +67,7 @@ type PodInformer struct {
 	containerIDsByKey map[string][]string
 }
 
-func NewPodInformer() (*PodInformer, error) {
+func NewPodInformer(podInformerChan chan ContainerInfo) (*PodInformer, error) {
 	// creates the in-cluster config
 	config, err := rest.InClusterConfig()
 	if err != nil {
@@ -104,6 +114,7 @@ func NewPodInformer() (*PodInformer, error) {
 		informer:          informer,
 		stop:              make(chan struct{}),
 		containerIDsByKey: make(map[string][]string),
+		podInformerChan:   podInformerChan,
 	}
 
 	// Now let's start the controller
@@ -126,19 +137,26 @@ func (p *PodInformer) GetContainerIDFromPod(namespace, podname string, container
 	return containerID, nil
 }
 
-func (p *PodInformer) GetPodFromContainerID(containerID string) (namespace, podname string, containerIndex int, err error) {
+func (p *PodInformer) GetPodFromContainerID(containerID string) (info *ContainerInfo, err error) {
 	for k, cids := range p.containerIDsByKey {
 		ns, n, err2 := cache.SplitMetaNamespaceKey(k)
 		if err2 != nil {
-			return "", "", -1, err2
+			return nil, err2
 		}
 		for i, cid := range cids {
 			if cid == containerID {
-				return ns, n, i, nil
+				return &ContainerInfo{
+					UID:         "TODO",
+					Namespace:   ns,
+					Podname:     n,
+					Idx:         i,
+					ContainerID: containerID,
+					Deleted:     false,
+				}, nil
 			}
 		}
 	}
-	return "", "", -1, fmt.Errorf("container not found for %q", containerID)
+	return nil, fmt.Errorf("container not found for %q", containerID)
 }
 
 func (p *PodInformer) Stop() {
@@ -177,15 +195,26 @@ func (p *PodInformer) syncToStdout(key string) error {
 		// Below we will warm up our cache with a Pod, so that we will see a delete for one pod
 		fmt.Printf("Pod %s does not exist anymore\n", key)
 		delete(p.containerIDsByKey, key)
+		// TODO podInformerChan
 	} else {
 		// Note that you also have to check the uid if you have a local controlled resource, which
 		// is dependent on the actual instance, to detect that a Pod was recreated with the same name
 		fmt.Printf("Sync/Add/Update for Pod %s %s:\n",
 			obj.(*v1.Pod).GetNamespace(), obj.(*v1.Pod).GetName())
 		p.containerIDsByKey[key] = nil
-		for _, s := range obj.(*v1.Pod).Status.ContainerStatuses {
+		for i, s := range obj.(*v1.Pod).Status.ContainerStatuses {
 			fmt.Printf("    %s\n", s.ContainerID)
+
 			p.containerIDsByKey[key] = append(p.containerIDsByKey[key], s.ContainerID)
+
+			p.podInformerChan <- ContainerInfo{
+				UID:         string(obj.(*v1.Pod).GetUID()),
+				Namespace:   obj.(*v1.Pod).GetNamespace(),
+				Podname:     obj.(*v1.Pod).GetName(),
+				Idx:         i,
+				ContainerID: s.ContainerID,
+				Deleted:     false,
+			}
 		}
 	}
 	return nil

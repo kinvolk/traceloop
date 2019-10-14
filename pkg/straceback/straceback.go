@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 	"unsafe"
 
 	bpflib "github.com/iovisor/gobpf/elf"
@@ -17,9 +18,13 @@ import (
 
 const int MaxTracedPrograms = MAX_TRACED_PROGRAMS;
 const int MaxPooledPrograms = MAX_POOLED_PROGRAMS;
+
 const unsigned char ContainerEventTypeCreate = CONTAINER_EVENT_TYPE_CREATE;
 const unsigned char ContainerEventTypeUpdate = CONTAINER_EVENT_TYPE_UPDATE;
 const unsigned char ContainerEventTypeDelete = CONTAINER_EVENT_TYPE_DELETE;
+
+const unsigned int ContainerStatusWaiting = CONTAINER_STATUS_WAITING;
+const unsigned int ContainerStatusReady = CONTAINER_STATUS_READY;
 */
 import "C"
 
@@ -65,8 +70,14 @@ type Tracelet struct {
 	utsns        uint32
 	pid          uint64
 	comm         string
+
 	containerID  string
-	status       traceletStatus
+	uid          string
+	namespace    string
+	podname      string
+	containeridx int
+
+	status traceletStatus
 }
 
 type StraceBack struct {
@@ -78,12 +89,18 @@ type StraceBack struct {
 	newContainerEventsMap *bpflib.PerfMap
 
 	tracelets []*Tracelet
+
+	eventChan chan []byte
+	lostChan  chan uint64
 	stopChan  chan struct{}
 
-	podInformer *podinformer.PodInformer
+	podInformerChan chan podinformer.ContainerInfo
+	podInformer     *podinformer.PodInformer
 }
 
 func NewTracer(withPidns bool) (*StraceBack, error) {
+	sb := &StraceBack{}
+
 	obj := "straceback-main-bpf.o"
 	if withPidns {
 		obj = "straceback-guess-bpf.o"
@@ -95,161 +112,201 @@ func NewTracer(withPidns bool) (*StraceBack, error) {
 	}
 	reader := bytes.NewReader(buf)
 
-	m := bpflib.NewModuleFromReader(reader)
-	if m == nil {
+	sb.mainProg = bpflib.NewModuleFromReader(reader)
+	if sb.mainProg == nil {
 		return nil, fmt.Errorf("BPF not supported")
 	}
+	sb.mainProg = sb.mainProg
 
 	sectionParams := make(map[string]bpflib.SectionParams)
 	sectionParams["maps/container_events"] = bpflib.SectionParams{
 		PerfRingBufferPageCount: 1,
 	}
-	err = m.Load(sectionParams)
+	err = sb.mainProg.Load(sectionParams)
 	if err != nil {
 		return nil, err
 	}
-	cgroupMap := m.Map("cgroup_map")
-	tailCallEnter := m.Map("tail_call_enter")
-	tailCallExit := m.Map("tail_call_exit")
-	syscallsDef := m.Map("syscalls")
+	sb.cgroupMap = sb.mainProg.Map("cgroup_map")
+	sb.tailCallEnter = sb.mainProg.Map("tail_call_enter")
+	sb.tailCallExit = sb.mainProg.Map("tail_call_exit")
+	sb.syscallsDef = sb.mainProg.Map("syscalls")
 
 	for i, _ := range syscallNames {
 		var nr uint64 = uint64(i)
 		var def [6]uint64 = syscallGetDef(i)
-		if err := m.UpdateElement(syscallsDef, unsafe.Pointer(&nr), unsafe.Pointer(&def[0]), 0); err != nil {
+		if err := sb.mainProg.UpdateElement(sb.syscallsDef, unsafe.Pointer(&nr), unsafe.Pointer(&def[0]), 0); err != nil {
 			return nil, fmt.Errorf("error updating syscall def map: %v", err)
 		}
 	}
 
-	err = m.EnableTracepoint("tracepoint/raw_syscalls/sys_enter")
+	err = sb.mainProg.EnableTracepoint("tracepoint/raw_syscalls/sys_enter")
 	if err != nil {
 		return nil, err
 	}
-	err = m.EnableTracepoint("tracepoint/raw_syscalls/sys_exit")
+	err = sb.mainProg.EnableTracepoint("tracepoint/raw_syscalls/sys_exit")
 	if err != nil {
 		return nil, err
 	}
 
-	stopChan := make(chan struct{})
-	t := make([]*Tracelet, C.MaxTracedPrograms)
-
-	var (
-		newContainerEventsMap *bpflib.PerfMap
-		podInformer           *podinformer.PodInformer
-	)
+	sb.stopChan = make(chan struct{})
+	sb.tracelets = make([]*Tracelet, C.MaxTracedPrograms)
 
 	if withPidns {
 		// start pod informer
-		podInformer, _ = podinformer.NewPodInformer()
+		sb.podInformerChan = make(chan podinformer.ContainerInfo)
+		sb.podInformer, _ = podinformer.NewPodInformer(sb.podInformerChan)
 
 		// init tracelet pool
 		for i := 0; i < int(C.MaxPooledPrograms); i++ {
-			t[i], err = getDummyTracelet(m, tailCallEnter, tailCallExit, uint32(i))
+			sb.tracelets[i], err = getDummyTracelet(sb.mainProg, sb.tailCallEnter, sb.tailCallExit, uint32(i))
 			if err != nil {
 				return nil, err
 			}
 		}
 
 		// init queue map
-		queueAvailProgs := m.Map("queue_avail_progs")
+		queueAvailProgs := sb.mainProg.Map("queue_avail_progs")
 		var zero uint64 = 0
 		var queue C.struct_queue_avail_progs_t = C.struct_queue_avail_progs_t{}
 		for i := 0; i < int(C.MaxPooledPrograms); i++ {
 			queue.indexes[i] = C.uint(i)
 		}
-		if err := m.UpdateElement(queueAvailProgs, unsafe.Pointer(&zero), unsafe.Pointer(&queue), 0); err != nil {
+		if err := sb.mainProg.UpdateElement(queueAvailProgs, unsafe.Pointer(&zero), unsafe.Pointer(&queue), 0); err != nil {
 			return nil, fmt.Errorf("error updating queue of BPF programs: %v", err)
 		}
 
 		// init container_events
-		eventChan := make(chan []byte)
-		lostChan := make(chan uint64)
-		stopChan := make(chan struct{})
+		sb.eventChan = make(chan []byte)
+		sb.lostChan = make(chan uint64)
 
-		newContainerEventsMap, err = bpflib.InitPerfMap(m, "container_events", eventChan, lostChan)
+		sb.newContainerEventsMap, err = bpflib.InitPerfMap(sb.mainProg, "container_events", sb.eventChan, sb.lostChan)
 		if err != nil {
 			return nil, fmt.Errorf("error initializing perf map: %v", err)
 		}
 
-		go func() {
-			for {
-				select {
-				case <-stopChan:
-					// On stop, stopChan will be closed but the other channels will
-					// also be closed shortly after. The select{} has no priorities,
-					// therefore, the "ok" value must be checked below.
-					return
-				case data, ok := <-eventChan:
-					if !ok {
-						return // see explanation above
-					}
-					eventC := (*C.struct_container_event_t)(unsafe.Pointer(&(data)[0]))
-
-					containerID := C.GoString(&eventC.param[0])
-					containerID = filepath.Base(containerID)
-					containerID = strings.TrimSuffix(containerID, ".scope")
-					if len(containerID) >= 64 {
-						containerID = "docker://" + containerID[len(containerID)-64:]
-					} else {
-						containerID = ""
-					}
-
-					fmt.Printf("New container event: type %d: utsns %v assigned to slot %d (%q, pid: %v, tid: %v)\n",
-						eventC.typ, eventC.utsns, eventC.idx, C.GoString(&eventC.comm[0]),
-						eventC.pid>>32, eventC.pid&0xFFFFFFFF)
-					fmt.Printf("    %s\n", containerID)
-
-					if eventC.idx < C.uint(C.MaxPooledPrograms) {
-						t[eventC.idx].utsns = uint32(eventC.utsns)
-						t[eventC.idx].comm = C.GoString(&eventC.comm[0])
-
-						if podInformer != nil {
-							if eventC.typ == C.ContainerEventTypeCreate {
-								t[eventC.idx].pid = uint64(eventC.pid)
-								t[eventC.idx].status = traceletStatusCreated
-							} else if eventC.typ == C.ContainerEventTypeUpdate && containerID != "" {
-								t[eventC.idx].containerID = containerID
-								t[eventC.idx].status = traceletStatusReady
-							} else if eventC.typ == C.ContainerEventTypeDelete {
-								t[eventC.idx].status = traceletStatusDeleted
-							}
-						}
-					}
-
-				case lost, ok := <-lostChan:
-					if !ok {
-						return // see explanation above
-					}
-					fmt.Printf("Lost data in the newContainerEventsMap: %v\n", lost)
-				}
-			}
-		}()
-		newContainerEventsMap.PollStart()
+		go sb.updater()
+		sb.newContainerEventsMap.PollStart()
 
 		// kprobe on free_uts_ns
-		err = m.EnableKprobe("kprobe/free_uts_ns", 8)
+		err = sb.mainProg.EnableKprobe("kprobe/free_uts_ns", 8)
 		if err != nil {
 			return nil, err
 		}
 
 		// guess
-		err = guess(m)
+		err = guess(sb.mainProg)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return &StraceBack{
-		mainProg:              m,
-		cgroupMap:             cgroupMap,
-		tailCallEnter:         tailCallEnter,
-		tailCallExit:          tailCallExit,
-		syscallsDef:           syscallsDef,
-		newContainerEventsMap: newContainerEventsMap,
-		tracelets:             t,
-		stopChan:              stopChan,
-		podInformer:           podInformer,
-	}, nil
+	return sb, nil
+}
+
+func (sb *StraceBack) updater() (out string) {
+	ticker := time.NewTicker(1000 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-sb.stopChan:
+			// On stop, stopChan will be closed but the other channels will
+			// also be closed shortly after. The select{} has no priorities,
+			// therefore, the "ok" value must be checked below.
+			return
+		case info, ok := <-sb.podInformerChan:
+			if !ok {
+				return // see explanation above
+			}
+			for i := 0; i < int(C.MaxPooledPrograms); i++ {
+				if sb.tracelets[i].containerID == info.ContainerID {
+					if sb.tracelets[i].status == traceletStatusCreated {
+						sb.tracelets[i].uid = info.UID
+						sb.tracelets[i].namespace = info.Namespace
+						sb.tracelets[i].podname = info.Podname
+						sb.tracelets[i].containeridx = info.Idx
+
+						utsnsMap := sb.mainProg.Map("utsns_map")
+						cStatus := C.struct_container_status_t{
+							idx:    C.uint(i),
+							status: C.ContainerStatusReady,
+						}
+						utsns := uint32(sb.tracelets[i].utsns)
+						if err := sb.mainProg.UpdateElement(utsnsMap, unsafe.Pointer(&utsns), unsafe.Pointer(&cStatus), 0); err != nil {
+							fmt.Printf("error updating utsns map: %v", err)
+							return
+						}
+						sb.tracelets[i].status = traceletStatusReady
+					}
+				}
+			}
+
+		case <-ticker.C:
+			for i := 0; i < int(C.MaxPooledPrograms); i++ {
+				if sb.tracelets[i].status == traceletStatusCreated {
+					if info, err := sb.podInformer.GetPodFromContainerID(sb.tracelets[i].containerID); err == nil {
+						sb.tracelets[i].uid = info.UID
+						sb.tracelets[i].namespace = info.Namespace
+						sb.tracelets[i].podname = info.Podname
+						sb.tracelets[i].containeridx = info.Idx
+
+						utsnsMap := sb.mainProg.Map("utsns_map")
+						cStatus := C.struct_container_status_t{
+							idx:    C.uint(i),
+							status: C.ContainerStatusReady,
+						}
+						if err := sb.mainProg.UpdateElement(utsnsMap, unsafe.Pointer(&sb.tracelets[i].utsns), unsafe.Pointer(&cStatus), 0); err != nil {
+							fmt.Printf("error updating utsns map: %v", err)
+							return
+						}
+						sb.tracelets[i].status = traceletStatusReady
+					}
+				}
+			}
+
+		case data, ok := <-sb.eventChan:
+			if !ok {
+				return // see explanation above
+			}
+			eventC := (*C.struct_container_event_t)(unsafe.Pointer(&(data)[0]))
+
+			containerID := C.GoString(&eventC.param[0])
+			containerID = filepath.Base(containerID)
+			containerID = strings.TrimSuffix(containerID, ".scope")
+			if len(containerID) >= 64 {
+				containerID = "docker://" + containerID[len(containerID)-64:]
+			} else {
+				containerID = ""
+			}
+
+			fmt.Printf("New container event: type %d: utsns %v assigned to slot %d (%q, pid: %v, tid: %v)\n",
+				eventC.typ, eventC.utsns, eventC.idx, C.GoString(&eventC.comm[0]),
+				eventC.pid>>32, eventC.pid&0xFFFFFFFF)
+			fmt.Printf("    %s\n", containerID)
+
+			if eventC.idx < C.uint(C.MaxPooledPrograms) {
+				sb.tracelets[eventC.idx].utsns = uint32(eventC.utsns)
+				sb.tracelets[eventC.idx].comm = C.GoString(&eventC.comm[0])
+
+				if sb.podInformer != nil {
+					if eventC.typ == C.ContainerEventTypeCreate {
+						sb.tracelets[eventC.idx].pid = uint64(eventC.pid)
+						sb.tracelets[eventC.idx].status = traceletStatusCreated
+					} else if eventC.typ == C.ContainerEventTypeUpdate && containerID != "" {
+						sb.tracelets[eventC.idx].containerID = containerID
+						sb.tracelets[eventC.idx].status = traceletStatusReady
+					} else if eventC.typ == C.ContainerEventTypeDelete {
+						sb.tracelets[eventC.idx].status = traceletStatusDeleted
+					}
+				}
+			}
+
+		case lost, ok := <-sb.lostChan:
+			if !ok {
+				return // see explanation above
+			}
+			fmt.Printf("Lost data in the newContainerEventsMap: %v\n", lost)
+		}
+	}
 }
 
 func (sb *StraceBack) List() (out string) {
@@ -265,9 +322,9 @@ func (sb *StraceBack) List() (out string) {
 				continue
 			}
 
-			namespace, podname, containerIndex, err := sb.podInformer.GetPodFromContainerID(sb.tracelets[i].containerID)
+			info, err := sb.podInformer.GetPodFromContainerID(sb.tracelets[i].containerID)
 			if err == nil {
-				out += fmt.Sprintf("%d: %s/%s #%d\n", i, namespace, podname, containerIndex)
+				out += fmt.Sprintf("%d: %s/%s #%d\n", i, info.Namespace, info.Podname, info.Idx)
 			} else {
 				out += fmt.Sprintf("%d: error: %s\n", i, err)
 			}
