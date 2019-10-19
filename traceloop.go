@@ -34,7 +34,7 @@ func main() {
 		paths = os.Args[1:]
 	}
 
-	t, err := straceback.NewTracer(withPidns)
+	t, err := straceback.NewTracer(withPidns, withPidns)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
