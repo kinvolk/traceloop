@@ -634,19 +634,23 @@ func (sb *StraceBack) DumpPod(namespace, podname string, containerIndex int) (ou
 		return "", fmt.Errorf("no pod informer")
 	}
 
-	containerID, err2 := sb.podInformer.GetContainerIDFromPod(namespace, podname, containerIndex)
-	if err2 != nil {
-		return "", err2
-	}
+	containerID, _ := sb.podInformer.GetContainerIDFromPod(namespace, podname, containerIndex)
 
 	for i := 0; i < int(C.MaxTracedPrograms); i++ {
 		if sb.tracelets[i] == nil {
 			continue
 		}
-		if sb.tracelets[i].containerID == containerID {
+		if containerID != "" && sb.tracelets[i].containerID == containerID {
 			out, err = sb.DumpProg(uint32(i))
 			return
 		}
+		if sb.tracelets[i].namespace == namespace &&
+			sb.tracelets[i].podname == podname &&
+			sb.tracelets[i].containeridx == containerIndex {
+			out, err = sb.DumpProg(uint32(i))
+			return
+		}
+
 	}
 	return "", fmt.Errorf("cannot find trace #%d for pod %s/%s", containerIndex, namespace, podname)
 }
