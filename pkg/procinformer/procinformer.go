@@ -68,6 +68,8 @@ func (p *ProcInformer) update() error {
 		p.mutex.Unlock()
 		return nil
 	}
+	lookups := p.lookups
+	p.lookups = make(map[uint32]struct{})
 	p.mutex.Unlock()
 
 	procPath := "/proc"
@@ -109,18 +111,21 @@ func (p *ProcInformer) update() error {
 		containerID := "docker://" + matches[2]
 		//fmt.Printf("pid %d utsns %d pod %s containerID %s\n", pid, utsns, podUid, containerID)
 
-		p.mutex.Lock()
-		if _, ok := p.lookups[utsns]; !ok {
-			p.mutex.Unlock()
+		if _, ok := lookups[utsns]; !ok {
 			continue
 		}
-		delete(p.lookups, utsns)
-		p.mutex.Unlock()
+		delete(lookups, utsns)
 
 		fmt.Printf("found containerID %s for utsns %d\n", containerID, utsns)
 		p.procInformerChan <- ProcInfo{
 			Utsns:       utsns,
 			ContainerID: containerID,
+		}
+	}
+	for utsns, _ := range lookups {
+		p.procInformerChan <- ProcInfo{
+			Utsns:       utsns,
+			ContainerID: "",
 		}
 	}
 

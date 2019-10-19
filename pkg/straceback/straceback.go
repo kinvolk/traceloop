@@ -231,10 +231,90 @@ func (sb *StraceBack) updater() (out string) {
 				return // see explanation above
 			}
 			for i := 0; i < int(C.MaxPooledPrograms); i++ {
-				if sb.tracelets[i].containerID == info.ContainerID {
+				if sb.tracelets[i].containerID != info.ContainerID {
+					continue
+				}
+				sb.tracelets[i].uid = info.UID
+				sb.tracelets[i].namespace = info.Namespace
+				sb.tracelets[i].podname = info.Podname
+				sb.tracelets[i].containeridx = info.Idx
+
+				if sb.tracelets[i].status != traceletStatusCreated {
+					continue
+				}
+
+				utsnsMap := sb.mainProg.Map("utsns_map")
+				cStatus := C.struct_container_status_t{
+					idx:    C.uint(i),
+					status: C.ContainerStatusReady,
+				}
+				utsns := uint32(sb.tracelets[i].utsns)
+				if err := sb.mainProg.UpdateElement(utsnsMap, unsafe.Pointer(&utsns), unsafe.Pointer(&cStatus), 0); err != nil {
+					fmt.Printf("error updating utsns map: %v", err)
+					return
+				}
+				sb.tracelets[i].status = traceletStatusReady
+			}
+
+		case <-ticker.C:
+			if sb.podInformer != nil {
+				for i := 0; i < int(C.MaxPooledPrograms); i++ {
+					if sb.tracelets[i].containerID == "" {
+						continue
+					}
+					var info *podinformer.ContainerInfo
+					var err error
+					if info, err = sb.podInformer.GetPodFromContainerID(sb.tracelets[i].containerID); err != nil {
+						continue
+					}
+
+					sb.tracelets[i].uid = info.UID
+					sb.tracelets[i].namespace = info.Namespace
+					sb.tracelets[i].podname = info.Podname
+					sb.tracelets[i].containeridx = info.Idx
+
 					if sb.tracelets[i].status != traceletStatusCreated {
 						continue
 					}
+
+					utsnsMap := sb.mainProg.Map("utsns_map")
+					cStatus := C.struct_container_status_t{
+						idx:    C.uint(i),
+						status: C.ContainerStatusReady,
+					}
+					cUtsns := uint32(sb.tracelets[i].utsns)
+					if err := sb.mainProg.UpdateElement(utsnsMap, unsafe.Pointer(&cUtsns), unsafe.Pointer(&cStatus), 0); err != nil {
+						fmt.Printf("error updating utsns map: %v", err)
+						return
+					}
+					sb.tracelets[i].status = traceletStatusReady
+				}
+			}
+
+		case info, ok := <-sb.procInformerChan:
+			if !ok {
+				return // see explanation above
+			}
+			for i := 0; i < int(C.MaxPooledPrograms); i++ {
+				if sb.tracelets[i].status != traceletStatusCreated {
+					continue
+				}
+				if sb.tracelets[i].utsns != info.Utsns {
+					continue
+				}
+
+				// if procInformer signals that it didn't find
+				// this utsns in procfs or it is not a
+				// Kubernetes pod
+				if info.ContainerID == "" {
+					// TODO: remove prog from the BPF map
+					sb.CloseProg(uint32(i))
+					continue
+				}
+
+				sb.tracelets[i].containerID = info.ContainerID
+
+				if info, err := sb.podInformer.GetPodFromContainerID(sb.tracelets[i].containerID); err == nil {
 					sb.tracelets[i].uid = info.UID
 					sb.tracelets[i].namespace = info.Namespace
 					sb.tracelets[i].podname = info.Podname
@@ -245,75 +325,12 @@ func (sb *StraceBack) updater() (out string) {
 						idx:    C.uint(i),
 						status: C.ContainerStatusReady,
 					}
-					utsns := uint32(sb.tracelets[i].utsns)
-					if err := sb.mainProg.UpdateElement(utsnsMap, unsafe.Pointer(&utsns), unsafe.Pointer(&cStatus), 0); err != nil {
+					cUtsns := uint32(sb.tracelets[i].utsns)
+					if err := sb.mainProg.UpdateElement(utsnsMap, unsafe.Pointer(&cUtsns), unsafe.Pointer(&cStatus), 0); err != nil {
 						fmt.Printf("error updating utsns map: %v", err)
 						return
 					}
 					sb.tracelets[i].status = traceletStatusReady
-				}
-			}
-
-		case <-ticker.C:
-			if sb.podInformer != nil {
-				for i := 0; i < int(C.MaxPooledPrograms); i++ {
-					if sb.tracelets[i].status != traceletStatusCreated {
-						continue
-					}
-					if sb.tracelets[i].containerID == "" {
-						continue
-					}
-					fmt.Printf("ticker: check slot %d - containerID %s\n", i, sb.tracelets[i].containerID)
-					if info, err := sb.podInformer.GetPodFromContainerID(sb.tracelets[i].containerID); err == nil {
-						fmt.Printf("ticker: check slot %d - found %v\n", i, info)
-						sb.tracelets[i].uid = info.UID
-						sb.tracelets[i].namespace = info.Namespace
-						sb.tracelets[i].podname = info.Podname
-						sb.tracelets[i].containeridx = info.Idx
-
-						utsnsMap := sb.mainProg.Map("utsns_map")
-						cStatus := C.struct_container_status_t{
-							idx:    C.uint(i),
-							status: C.ContainerStatusReady,
-						}
-						cUtsns := uint32(sb.tracelets[i].utsns)
-						if err := sb.mainProg.UpdateElement(utsnsMap, unsafe.Pointer(&cUtsns), unsafe.Pointer(&cStatus), 0); err != nil {
-							fmt.Printf("error updating utsns map: %v", err)
-							return
-						}
-						sb.tracelets[i].status = traceletStatusReady
-					}
-				}
-			}
-
-		case info, ok := <-sb.procInformerChan:
-			if !ok {
-				return // see explanation above
-			}
-			for i := 0; i < int(C.MaxPooledPrograms); i++ {
-				if sb.tracelets[i].status == traceletStatusCreated {
-					if sb.tracelets[i].utsns == info.Utsns {
-						sb.tracelets[i].containerID = info.ContainerID
-
-						if info, err := sb.podInformer.GetPodFromContainerID(sb.tracelets[i].containerID); err == nil {
-							sb.tracelets[i].uid = info.UID
-							sb.tracelets[i].namespace = info.Namespace
-							sb.tracelets[i].podname = info.Podname
-							sb.tracelets[i].containeridx = info.Idx
-
-							utsnsMap := sb.mainProg.Map("utsns_map")
-							cStatus := C.struct_container_status_t{
-								idx:    C.uint(i),
-								status: C.ContainerStatusReady,
-							}
-							cUtsns := uint32(sb.tracelets[i].utsns)
-							if err := sb.mainProg.UpdateElement(utsnsMap, unsafe.Pointer(&cUtsns), unsafe.Pointer(&cStatus), 0); err != nil {
-								fmt.Printf("error updating utsns map: %v", err)
-								return
-							}
-							sb.tracelets[i].status = traceletStatusReady
-						}
-					}
 				}
 			}
 
@@ -345,7 +362,7 @@ func (sb *StraceBack) updater() (out string) {
 					if eventC.typ == C.ContainerEventTypeCreate {
 						sb.tracelets[eventC.idx].pid = uint64(eventC.pid)
 						sb.tracelets[eventC.idx].status = traceletStatusCreated
-						if sb.procInformerChan != nil && !strings.HasPrefix(sb.tracelets[eventC.idx].comm, "runc") {
+						if sb.procInformer != nil && !strings.HasPrefix(sb.tracelets[eventC.idx].comm, "runc") {
 							sb.procInformer.LookupContainerID(sb.tracelets[eventC.idx].utsns)
 						}
 					} else if eventC.typ == C.ContainerEventTypeUpdate && containerID != "" {
@@ -382,6 +399,12 @@ func (sb *StraceBack) List() (out string) {
 			info, err := sb.podInformer.GetPodFromContainerID(sb.tracelets[i].containerID)
 			if err == nil {
 				out += fmt.Sprintf("%d: %s/%s #%d\n", i, info.Namespace, info.Podname, info.Idx)
+			} else if sb.tracelets[i].podname != "" {
+				out += fmt.Sprintf("%d: %s/%s #%d (deleted)\n",
+					i,
+					sb.tracelets[i].namespace,
+					sb.tracelets[i].podname,
+					sb.tracelets[i].containeridx)
 			} else {
 				out += fmt.Sprintf("%d: error: %s\n", i, err)
 			}
