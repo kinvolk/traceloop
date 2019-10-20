@@ -10,6 +10,7 @@ import (
 
 	bpflib "github.com/iovisor/gobpf/elf"
 
+	"github.com/kinvolk/traceloop/pkg/annotationpublisher"
 	"github.com/kinvolk/traceloop/pkg/podinformer"
 	"github.com/kinvolk/traceloop/pkg/procinformer"
 )
@@ -100,9 +101,11 @@ type StraceBack struct {
 
 	procInformerChan chan procinformer.ProcInfo
 	procInformer     *procinformer.ProcInformer
+
+	annotationPublisher *annotationpublisher.AnnotationPublisher
 }
 
-func NewTracer(withPodDiscovery bool, withProcInformer bool) (*StraceBack, error) {
+func NewTracer(withPodDiscovery bool, withProcInformer bool, withAnnotationPublisher bool) (*StraceBack, error) {
 	sb := &StraceBack{}
 
 	obj := "straceback-main-bpf.o"
@@ -209,6 +212,10 @@ func NewTracer(withPodDiscovery bool, withProcInformer bool) (*StraceBack, error
 		sb.procInformer, _ = procinformer.NewProcInformer(sb.procInformerChan)
 	}
 
+	if withAnnotationPublisher {
+		sb.annotationPublisher, _ = annotationpublisher.NewAnnotationPublisher()
+	}
+
 	go sb.updater()
 
 	return sb, nil
@@ -289,6 +296,9 @@ func (sb *StraceBack) updater() (out string) {
 					}
 					sb.tracelets[i].status = traceletStatusReady
 				}
+			}
+			if sb.annotationPublisher != nil {
+				sb.annotationPublisher.Publish()
 			}
 
 		case info, ok := <-sb.procInformerChan:
