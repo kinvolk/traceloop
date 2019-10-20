@@ -282,7 +282,9 @@ func (sb *StraceBack) updater() (out string) {
 						continue
 					}
 
-					sb.tracelets[i].uid = info.UID
+					if info.UID != "" {
+						sb.tracelets[i].uid = info.UID
+					}
 					sb.tracelets[i].namespace = info.Namespace
 					sb.tracelets[i].podname = info.Podname
 					sb.tracelets[i].containeridx = info.Idx
@@ -328,9 +330,14 @@ func (sb *StraceBack) updater() (out string) {
 				}
 
 				sb.tracelets[i].containerID = info.ContainerID
+				if info.PodUID != "" {
+					sb.tracelets[i].uid = info.PodUID
+				}
 
 				if info, err := sb.podInformer.GetPodFromContainerID(sb.tracelets[i].containerID); err == nil {
-					sb.tracelets[i].uid = info.UID
+					if info.UID != "" {
+						sb.tracelets[i].uid = info.UID
+					}
 					sb.tracelets[i].namespace = info.Namespace
 					sb.tracelets[i].podname = info.Podname
 					sb.tracelets[i].containeridx = info.Idx
@@ -366,7 +373,7 @@ func (sb *StraceBack) updater() (out string) {
 			fmt.Printf("New container event: type %d: utsns %v assigned to slot %d (%q, pid: %v, tid: %v)\n",
 				eventC.typ, eventC.utsns, eventC.idx, C.GoString(&eventC.comm[0]),
 				eventC.pid>>32, eventC.pid&0xFFFFFFFF)
-			fmt.Printf("    %s %s\n", containerID, podUid)
+			fmt.Printf("    %s %s (%s)\n", containerID, podUid, C.GoString(&eventC.param[0]))
 
 			if eventC.idx < C.uint(C.MaxPooledPrograms) {
 				sb.tracelets[eventC.idx].traceID = fmt.Sprintf("%016x", uint64(eventC.timestamp))

@@ -12,6 +12,7 @@ import (
 )
 
 type ProcInfo struct {
+	PodUID      string
 	ContainerID string
 	Utsns       uint32
 }
@@ -107,7 +108,7 @@ func (p *ProcInformer) update() error {
 		if len(matches) != 3 {
 			continue
 		}
-		//podUid := matches[1]
+		podUid := matches[1]
 		containerID := "docker://" + matches[2]
 		//fmt.Printf("pid %d utsns %d pod %s containerID %s\n", pid, utsns, podUid, containerID)
 
@@ -120,12 +121,14 @@ func (p *ProcInformer) update() error {
 		p.procInformerChan <- ProcInfo{
 			Utsns:       utsns,
 			ContainerID: containerID,
+			PodUID:      podUid,
 		}
 	}
 	for utsns, _ := range lookups {
 		p.procInformerChan <- ProcInfo{
 			Utsns:       utsns,
 			ContainerID: "",
+			PodUID:      "",
 		}
 	}
 
