@@ -2,6 +2,7 @@ package straceback
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -73,6 +74,7 @@ type Tracelet struct {
 	pid          uint64
 	comm         string
 
+	traceID      string
 	containerID  string
 	uid          string
 	namespace    string
@@ -80,6 +82,15 @@ type Tracelet struct {
 	containeridx int
 
 	status traceletStatus
+}
+
+type TraceletState struct {
+	TraceID      string `json:"traceid,omitempty"`
+	ContainerID  string `json:"containerid,omitempty"`
+	UID          string `json:"uid,omitempty"`
+	Namespace    string `json:"namespace,omitempty"`
+	Podname      string `json:"podname,omitempty"`
+	Containeridx int    `json:"containeridx,omitempty"`
 }
 
 type StraceBack struct {
@@ -297,9 +308,7 @@ func (sb *StraceBack) updater() (out string) {
 					sb.tracelets[i].status = traceletStatusReady
 				}
 			}
-			if sb.annotationPublisher != nil {
-				sb.annotationPublisher.Publish()
-			}
+			sb.publish()
 
 		case info, ok := <-sb.procInformerChan:
 			if !ok {
@@ -391,6 +400,31 @@ func (sb *StraceBack) updater() (out string) {
 			fmt.Printf("Lost data in the newContainerEventsMap: %v\n", lost)
 		}
 	}
+}
+
+func (sb *StraceBack) publish() {
+	if sb.annotationPublisher == nil {
+		return
+	}
+
+	var ts []TraceletState
+
+	for i := 0; i < int(C.MaxPooledPrograms); i++ {
+		if sb.tracelets[i].containerID == "" {
+			continue
+		}
+		ts = append(ts, TraceletState{
+			TraceID:      sb.tracelets[i].traceID,
+			ContainerID:  sb.tracelets[i].containerID,
+			UID:          sb.tracelets[i].uid,
+			Namespace:    sb.tracelets[i].namespace,
+			Podname:      sb.tracelets[i].podname,
+			Containeridx: sb.tracelets[i].containeridx,
+		})
+	}
+	out, _ := json.Marshal(ts)
+
+	sb.annotationPublisher.Publish(string(out))
 }
 
 func (sb *StraceBack) List() (out string) {
