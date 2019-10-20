@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 	"unsafe"
@@ -236,6 +236,10 @@ func (sb *StraceBack) updater() (out string) {
 	ticker := time.NewTicker(1000 * time.Millisecond)
 	defer ticker.Stop()
 
+	// Example of param:
+	// /sys/fs/cgroup/systemd/kubepods/besteffort/pod91a8fc3a-0ecf-48b4-81bf-78a7275d348c/f75aff467357c5d0ddd47cb7ad87ed38746e018992586ff66198a5c11218f634
+	paramRegexp, _ := regexp.Compile("^/sys/fs/cgroup/systemd.*/kubepods.*[/-]pod([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}).*/([0-9a-f]{64})")
+
 	for {
 		select {
 		case <-sb.stopChan:
@@ -359,19 +363,18 @@ func (sb *StraceBack) updater() (out string) {
 			}
 			eventC := (*C.struct_container_event_t)(unsafe.Pointer(&(data)[0]))
 
-			containerID := C.GoString(&eventC.param[0])
-			containerID = filepath.Base(containerID)
-			containerID = strings.TrimSuffix(containerID, ".scope")
-			if len(containerID) >= 64 {
-				containerID = "docker://" + containerID[len(containerID)-64:]
-			} else {
-				containerID = ""
+			matches := paramRegexp.FindStringSubmatch(C.GoString(&eventC.param[0]))
+			podUid := ""
+			containerID := ""
+			if len(matches) == 3 {
+				podUid = matches[1]
+				containerID = "docker://" + matches[2]
 			}
 
 			fmt.Printf("New container event: type %d: utsns %v assigned to slot %d (%q, pid: %v, tid: %v)\n",
 				eventC.typ, eventC.utsns, eventC.idx, C.GoString(&eventC.comm[0]),
 				eventC.pid>>32, eventC.pid&0xFFFFFFFF)
-			fmt.Printf("    %s\n", containerID)
+			fmt.Printf("    %s %s\n", containerID, podUid)
 
 			if eventC.idx < C.uint(C.MaxPooledPrograms) {
 				sb.tracelets[eventC.idx].utsns = uint32(eventC.utsns)
@@ -386,6 +389,7 @@ func (sb *StraceBack) updater() (out string) {
 						}
 					} else if eventC.typ == C.ContainerEventTypeUpdate && containerID != "" {
 						sb.tracelets[eventC.idx].containerID = containerID
+						sb.tracelets[eventC.idx].uid = podUid
 						sb.tracelets[eventC.idx].status = traceletStatusReady
 					} else if eventC.typ == C.ContainerEventTypeDelete {
 						sb.tracelets[eventC.idx].status = traceletStatusDeleted

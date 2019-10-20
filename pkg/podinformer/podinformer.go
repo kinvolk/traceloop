@@ -146,7 +146,7 @@ func (p *PodInformer) GetPodFromContainerID(containerID string) (info *Container
 		for i, cid := range cids {
 			if cid == containerID {
 				return &ContainerInfo{
-					UID:         "TODO",
+					UID:         "",
 					Namespace:   ns,
 					Podname:     n,
 					Idx:         i,
