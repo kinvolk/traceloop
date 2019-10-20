@@ -14,6 +14,7 @@ import (
 	"github.com/kinvolk/traceloop/pkg/annotationpublisher"
 	"github.com/kinvolk/traceloop/pkg/podinformer"
 	"github.com/kinvolk/traceloop/pkg/procinformer"
+	"github.com/kinvolk/traceloop/pkg/tracemeta"
 )
 
 /*
@@ -82,15 +83,6 @@ type Tracelet struct {
 	containeridx int
 
 	status traceletStatus
-}
-
-type TraceletState struct {
-	TraceID      string `json:"traceid,omitempty"`
-	ContainerID  string `json:"containerid,omitempty"`
-	UID          string `json:"uid,omitempty"`
-	Namespace    string `json:"namespace,omitempty"`
-	Podname      string `json:"podname,omitempty"`
-	Containeridx int    `json:"containeridx,omitempty"`
 }
 
 type StraceBack struct {
@@ -412,13 +404,13 @@ func (sb *StraceBack) publish() {
 		return
 	}
 
-	var ts []TraceletState
+	var ts []tracemeta.TraceMeta
 
 	for i := 0; i < int(C.MaxPooledPrograms); i++ {
 		if sb.tracelets[i].containerID == "" {
 			continue
 		}
-		ts = append(ts, TraceletState{
+		ts = append(ts, tracemeta.TraceMeta{
 			TraceID:      sb.tracelets[i].traceID,
 			ContainerID:  sb.tracelets[i].containerID,
 			UID:          sb.tracelets[i].uid,
