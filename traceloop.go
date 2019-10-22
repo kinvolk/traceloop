@@ -81,6 +81,16 @@ func main() {
 			fmt.Fprintf(w, "%s", out)
 		}
 
+		dumpByTraceidHandler := func(w http.ResponseWriter, r *http.Request) {
+			traceidStr := r.FormValue("traceid")
+			out, err := t.DumpProgByTraceid(traceidStr)
+			if err != nil {
+				fmt.Fprintf(w, "%v\n", err)
+				return
+			}
+			fmt.Fprintf(w, "%s", out)
+		}
+
 		dumpByCgroupHandler := func(w http.ResponseWriter, r *http.Request) {
 			cgroupStr := r.FormValue("cgroup")
 			out, err := t.DumpProgByCgroup(cgroupStr)
@@ -167,6 +177,7 @@ func main() {
 		http.HandleFunc("/dump-pod", dumpPodHandler)
 		http.HandleFunc("/dump-by-name", dumpByNameHandler)
 		http.HandleFunc("/dump-by-cgroup", dumpByCgroupHandler)
+		http.HandleFunc("/dump-by-traceid", dumpByTraceidHandler)
 		http.HandleFunc("/close", closeHandler)
 		http.HandleFunc("/close-by-name", closeByNameHandler)
 		server := http.Server{}

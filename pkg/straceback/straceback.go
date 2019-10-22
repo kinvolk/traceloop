@@ -635,6 +635,15 @@ func (sb *StraceBack) DumpProgByName(name string) (out string, err error) {
 	return "", fmt.Errorf("prog with name %q not found", name)
 }
 
+func (sb *StraceBack) DumpProgByTraceid(traceid string) (out string, err error) {
+	for i := 0; i < int(C.MaxTracedPrograms); i++ {
+		if sb.tracelets[i] != nil && sb.tracelets[i].traceID == traceid {
+			return sb.DumpProg(uint32(i))
+		}
+	}
+	return "", fmt.Errorf("prog with traceid %q not found", traceid)
+}
+
 func (sb *StraceBack) DumpProgByCgroup(cgroupPath string) (out string, err error) {
 	for i := 0; i < int(C.MaxTracedPrograms); i++ {
 		if sb.tracelets[i] != nil && sb.tracelets[i].cgroupPath == cgroupPath {
