@@ -284,7 +284,7 @@ static u32 find_prog_idx(void *ctx, u64 pid, u32 utsns, long id, int exit) {
 	for (i=0; i<MAX_POOLED_PROGRAMS-1; i++) {
 		queue->indexes[i] = queue->indexes[i+1];
 	}
-	queue->indexes[MAX_POOLED_PROGRAMS-2] = 0xFFFFFFFF;
+	queue->indexes[MAX_POOLED_PROGRAMS-1] = 0xFFFFFFFF;
 
 	// notify userspace of the new container
 	u64 ts = bpf_ktime_get_ns();
@@ -417,6 +417,8 @@ int kprobe__free_uts_ns(struct pt_regs *ctx)
 	};
 	bpf_perf_event_output(ctx, &container_events, BPF_F_CURRENT_CPU, &ev, sizeof(ev));
 
+	// remove the mapping
+	bpf_map_delete_elem(&utsns_map, &utsns);
 	return 0;
 }
 
