@@ -203,6 +203,9 @@ func (p *PodInformer) syncToStdout(key string) error {
 			obj.(*v1.Pod).GetNamespace(), obj.(*v1.Pod).GetName())
 		p.containerIDsByKey[key] = nil
 		for i, s := range obj.(*v1.Pod).Status.ContainerStatuses {
+			if s.ContainerID == "" {
+				continue
+			}
 			fmt.Printf("    %s\n", s.ContainerID)
 
 			p.containerIDsByKey[key] = append(p.containerIDsByKey[key], s.ContainerID)
