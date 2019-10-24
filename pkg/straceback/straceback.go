@@ -75,6 +75,9 @@ type Tracelet struct {
 	pid          uint64
 	comm         string
 
+	timeCreation time.Time
+	timeDeletion time.Time
+
 	traceID      string
 	containerID  string
 	uid          string
@@ -305,6 +308,11 @@ func (sb *StraceBack) updater() (out string) {
 					}
 					sb.tracelets[i].status = traceletStatusReady
 				}
+
+				if err := sb.recycleTracelets(); err != nil {
+					fmt.Printf("error recycling tracelets: %v", err)
+					return
+				}
 			}
 			sb.publish()
 
@@ -383,6 +391,7 @@ func (sb *StraceBack) updater() (out string) {
 				if sb.podInformer != nil {
 					if eventC.typ == C.ContainerEventTypeCreate {
 						sb.tracelets[eventC.idx].pid = uint64(eventC.pid)
+						sb.tracelets[eventC.idx].timeCreation = time.Now()
 						sb.tracelets[eventC.idx].status = traceletStatusCreated
 						if sb.procInformer != nil && !strings.HasPrefix(sb.tracelets[eventC.idx].comm, "runc") {
 							sb.procInformer.LookupContainerID(sb.tracelets[eventC.idx].utsns)
@@ -393,6 +402,7 @@ func (sb *StraceBack) updater() (out string) {
 						sb.tracelets[eventC.idx].status = traceletStatusReady
 					} else if eventC.typ == C.ContainerEventTypeDelete {
 						sb.tracelets[eventC.idx].status = traceletStatusDeleted
+						sb.tracelets[eventC.idx].timeDeletion = time.Now()
 					}
 				}
 			}
@@ -417,18 +427,93 @@ func (sb *StraceBack) publish() {
 		if sb.tracelets[i].containerID == "" {
 			continue
 		}
-		ts = append(ts, tracemeta.TraceMeta{
+		tm := tracemeta.TraceMeta{
 			TraceID:      sb.tracelets[i].traceID,
 			ContainerID:  sb.tracelets[i].containerID,
 			UID:          sb.tracelets[i].uid,
 			Namespace:    sb.tracelets[i].namespace,
 			Podname:      sb.tracelets[i].podname,
 			Containeridx: sb.tracelets[i].containeridx,
-		})
+		}
+		if !sb.tracelets[i].timeCreation.IsZero() {
+			tm.TimeCreation = sb.tracelets[i].timeCreation.Format(time.RFC3339)
+		}
+		if !sb.tracelets[i].timeDeletion.IsZero() {
+			tm.TimeDeletion = sb.tracelets[i].timeDeletion.Format(time.RFC3339)
+		}
+		tm.Status = sb.tracelets[i].status.String()
+		ts = append(ts, tm)
 	}
 	out, _ := json.Marshal(ts)
 
 	sb.annotationPublisher.Publish(string(out))
+}
+
+func (sb *StraceBack) recycleTracelets() error {
+	newIndexes := []int{}
+	for i := 0; i < int(C.MaxPooledPrograms); i++ {
+		if sb.tracelets[i].status != traceletStatusDeleted {
+			continue
+		}
+		fmt.Printf("recycle %d: time %v - %v\n", i, sb.tracelets[i].timeDeletion.Format(time.RFC3339), time.Now())
+		if sb.tracelets[i].timeDeletion.Add(time.Minute).Before(time.Now()) {
+			fmt.Printf("Deleting tracelet #%d\n", i)
+			sb.CloseProg(uint32(i))
+
+			var err error
+			sb.tracelets[i], err = getDummyTracelet(sb.mainProg, sb.tailCallEnter, sb.tailCallExit, uint32(i))
+			if err != nil {
+				return err
+			}
+			newIndexes = append(newIndexes, i)
+		}
+	}
+
+	if len(newIndexes) == 0 {
+		return nil
+	}
+
+	// update queue map
+	// FIXME: it's racy
+
+	queueAvailProgs := sb.mainProg.Map("queue_avail_progs")
+	var zero uint64 = 0
+	var queue C.struct_queue_avail_progs_t = C.struct_queue_avail_progs_t{}
+	if err := sb.mainProg.LookupElement(queueAvailProgs, unsafe.Pointer(&zero), unsafe.Pointer(&queue)); err != nil {
+		return fmt.Errorf("error looking up queue of BPF programs: %v", err)
+	}
+
+	fmt.Printf("Current queue is %v\n", queue.indexes)
+
+	updated := false
+	for i := 0; i < int(C.MaxPooledPrograms); i++ {
+		if queue.indexes[i] < C.uint(C.MaxPooledPrograms) {
+			continue
+		}
+		if len(newIndexes) == 0 {
+			break
+		}
+		fmt.Printf("Adding tracelet #%d in queue at %d\n", newIndexes[0], i)
+		updated = true
+		queue.indexes[i] = C.uint(newIndexes[0])
+		if len(newIndexes) > 1 {
+			newIndexes = newIndexes[1:]
+		} else {
+			newIndexes = []int{}
+		}
+	}
+	if len(newIndexes) != 0 {
+		fmt.Printf("Error: too many new tracelets\n")
+	}
+
+	if updated {
+		fmt.Printf("Update queue to %v\n", queue.indexes)
+		if err := sb.mainProg.UpdateElement(queueAvailProgs, unsafe.Pointer(&zero), unsafe.Pointer(&queue), 0); err != nil {
+			return fmt.Errorf("error updating queue of BPF programs: %v", err)
+		}
+	}
+
+	return nil
 }
 
 func (sb *StraceBack) List() (out string) {
@@ -465,9 +550,10 @@ func (sb *StraceBack) List() (out string) {
 
 func getDummyTracelet(mainProg *bpflib.Module, tailCallEnter *bpflib.Map, tailCallExit *bpflib.Map, idx uint32) (*Tracelet, error) {
 	tracelet := Tracelet{
-		eventChan: make(chan []byte),
-		lostChan:  make(chan uint64),
-		status:    traceletStatusUnused,
+		eventChan:    make(chan []byte),
+		lostChan:     make(chan uint64),
+		status:       traceletStatusUnused,
+		containeridx: -1,
 	}
 
 	buf, err := Asset("straceback-tailcall-bpf.o")
