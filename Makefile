@@ -7,7 +7,9 @@ BUILDER_DOCKER_IMAGE?=kinvolk/traceloop-builder
 
 DOCKER_FILE?=traceloop.Dockerfile
 IMAGE_TAG=$(shell ./tools/image-tag)
+IMAGE_BRANCH_TAG=$(shell ./tools/image-tag branch)
 DOCKER_IMAGE?=kinvolk/traceloop:$(IMAGE_TAG)
+DOCKER_BRANCH_IMAGE?=kinvolk/traceloop:$(IMAGE_BRANCH_TAG)
 
 # If you can use docker without being root, you can do "make SUDO="
 SUDO=$(shell docker info >/dev/null 2>&1 || echo "sudo -E")
@@ -58,6 +60,7 @@ bin-traceloop:
 
 docker/image:
 	$(SUDO) docker build -t $(DOCKER_IMAGE) -f $(DOCKER_FILE) .
+	$(SUDO) docker tag $(DOCKER_IMAGE) $(DOCKER_BRANCH_IMAGE)
 
 docker/test:
 	$(SUDO) docker run -ti --rm --privileged \
@@ -68,6 +71,7 @@ docker/test:
 
 docker/push:
 	$(SUDO) docker push $(DOCKER_IMAGE)
+	$(SUDO) docker push $(DOCKER_BRANCH_IMAGE)
 
 lint:
 	./tools/lint -ignorespelling "agre " -ignorespelling "AGRE " .
