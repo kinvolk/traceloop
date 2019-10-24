@@ -25,7 +25,7 @@ struct guess_status_t {
 };
 
 #define MAX_TRACED_PROGRAMS 128
-#define MAX_POOLED_PROGRAMS 16
+#define MAX_POOLED_PROGRAMS 32
 struct queue_avail_progs_t {
 	__u32 indexes[MAX_POOLED_PROGRAMS];
 };
