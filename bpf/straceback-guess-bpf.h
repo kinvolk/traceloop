@@ -36,6 +36,7 @@ struct queue_avail_progs_t {
 struct container_status_t {
 	__u32 idx;
 	__u32 status;
+	__u64 caps;
 };
 
 #ifndef TASK_COMM_LEN

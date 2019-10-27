@@ -275,7 +275,7 @@ static u32 find_prog_idx(void *ctx, u64 pid, u32 utsns, long id, int exit) {
 	}
 
 	// assign idx for the utsns
-	struct container_status_t new_status = {newProgIdx, CONTAINER_STATUS_WAITING};
+	struct container_status_t new_status = {newProgIdx, CONTAINER_STATUS_WAITING, 0};
 	bpf_map_update_elem(&utsns_map, &utsns, &new_status, BPF_ANY);
 
 	// shift the queue
@@ -422,6 +422,44 @@ int kprobe__free_uts_ns(struct pt_regs *ctx)
 	return 0;
 }
 
+SEC("kprobe/cap_capable")
+int kprobe__cap_capable(struct pt_regs *ctx)
+{
+	int cap;
+	cap = (int) PT_REGS_PARM3(ctx);
+
+	struct guess_status_t *status;
+	u64 zero = 0;
+	status = bpf_map_lookup_elem(&guess_status, &zero);
+	if (status == NULL || status->state != GUESS_STATE_READY) {
+		return 0;
+	}
+
+	struct task_struct *task = (void *)bpf_get_current_task();
+
+	u32 utsns = get_utsns(status, task);
+	if (utsns == 0 || utsns == PROC_UTS_INIT_INO) {
+		return 0;
+	}
+
+	struct container_status_t *container_status;
+	container_status = bpf_map_lookup_elem(&utsns_map, &utsns);
+	if (container_status == NULL || container_status->status != CONTAINER_STATUS_READY) {
+		return 0;
+	}
+
+	char comm[TASK_COMM_LEN];
+	bpf_get_current_comm(comm, sizeof(comm));
+	if (comm[0] == 'r' && comm[1] == 'u' &&
+	    comm[2] != 'n' && comm[3] == 'c') {
+		return 0;
+	}
+
+	printt("utsns: %d cap: %d\n", utsns, cap);
+	container_status->caps |= 1 << cap;
+
+	return 0;
+}
 
 char _license[] SEC("license") = "GPL";
 

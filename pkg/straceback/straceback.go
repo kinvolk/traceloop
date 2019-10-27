@@ -207,6 +207,12 @@ func NewTracer(withPodDiscovery bool, withProcInformer bool, withAnnotationPubli
 			return nil, err
 		}
 
+		// kprobe on cap_capable
+		err = sb.mainProg.EnableKprobe("kprobe/cap_capable", 8)
+		if err != nil {
+			return nil, err
+		}
+
 		// guess
 		err = guess(sb.mainProg)
 		if err != nil {
@@ -427,6 +433,14 @@ func (sb *StraceBack) publish() {
 		if sb.tracelets[i].containerID == "" {
 			continue
 		}
+		caps := uint64(0)
+		cUtsns := uint32(sb.tracelets[i].utsns)
+		cStatus := C.struct_container_status_t{}
+		utsnsMap := sb.mainProg.Map("utsns_map")
+		if err := sb.mainProg.LookupElement(utsnsMap, unsafe.Pointer(&cUtsns), unsafe.Pointer(&cStatus)); err == nil {
+			caps = uint64(cStatus.caps)
+		}
+
 		tm := tracemeta.TraceMeta{
 			TraceID:      sb.tracelets[i].traceID,
 			ContainerID:  sb.tracelets[i].containerID,
@@ -434,6 +448,7 @@ func (sb *StraceBack) publish() {
 			Namespace:    sb.tracelets[i].namespace,
 			Podname:      sb.tracelets[i].podname,
 			Containeridx: sb.tracelets[i].containeridx,
+			Capabilities: caps,
 		}
 		if !sb.tracelets[i].timeCreation.IsZero() {
 			tm.TimeCreation = sb.tracelets[i].timeCreation.Format(time.RFC3339)
