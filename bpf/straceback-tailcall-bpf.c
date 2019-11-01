@@ -55,9 +55,9 @@ struct bpf_map_def SEC("maps/probe_at_sys_exit") probe_at_sys_exit = {
 	.type = BPF_MAP_TYPE_HASH,
 	.key_size = sizeof(__u64),
 	.value_size = sizeof(struct remembered_args),
-	.max_entries = 128,
-	.pinning = 0,
-	.namespace = "",
+	.max_entries = 1024,
+	.pinning = PIN_GLOBAL_NS,
+	.namespace = "straceback",
 };
 
 struct sys_enter_args {
@@ -79,6 +79,16 @@ struct sys_exit_args {
 	long id;
 	unsigned long ret;
 };
+
+__attribute__((always_inline))
+static int skip_exit_probe(int nr) {
+	#define NR_EXIT 60
+	#define NR_EXIT_GROUP 231
+
+	if (nr == NR_EXIT || nr == NR_EXIT_GROUP)
+		return 1;
+	return 0;
+}
 
 SEC("tracepoint/raw_syscalls/sys_enter")
 int tracepoint__sys_enter(struct sys_enter_args *ctx)
@@ -116,7 +126,13 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 
 	bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc, sizeof(sc));
 
-	bpf_map_update_elem(&probe_at_sys_exit, &pid, &remembered, BPF_ANY);
+	// Avoid using probe_at_sys_exit for exit() and exit_group() because sys_exit
+	// would not be called and the map would not be cleaned up and would get full.
+	// Note that a process can still get killed in the middle, so we would need
+	// a userspace cleaner for this case (TODO).
+	if (!skip_exit_probe(nr)) {
+		bpf_map_update_elem(&probe_at_sys_exit, &pid, &remembered, BPF_ANY);
+	}
 
 	#pragma clang loop unroll(full)
 	for (i = 0; i < 6; i++) {
