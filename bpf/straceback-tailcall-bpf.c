@@ -9,6 +9,7 @@
 #include <linux/bpf.h>
 #include "bpf_helpers.h"
 #include "straceback-tailcall-bpf.h"
+#include "straceback-tailcall-caps.h"
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wtautological-compare"
@@ -38,6 +39,15 @@ struct bpf_map_def SEC("maps/syscalls") syscalls = {
 	.max_entries = 1024,
 	.pinning = PIN_GLOBAL_NS,
 	.namespace = "straceback",
+};
+
+struct bpf_map_def SEC("maps/caps_records") caps_records = {
+	.type = BPF_MAP_TYPE_HASH,
+	.key_size = sizeof(struct cap_access_key_t),
+	.value_size = sizeof(struct cap_access_record_t),
+	.max_entries = 128,
+	.pinning = 0,
+	.namespace = "",
 };
 
 struct remembered_args {
@@ -232,7 +242,25 @@ int tracepoint__sys_exit(struct sys_exit_args *ctx)
 
 	remembered = bpf_map_lookup_elem(&probe_at_sys_exit, &pid);
 	if (remembered) {
-		sc.args[1] = remembered->caps;
+		if (remembered->caps != 0) {
+			sc.args[1] = remembered->caps;
+
+			struct cap_access_key_t cap_access_key = {
+				.syscall_id = nr,
+				.caps = remembered->caps,
+			};
+			struct cap_access_record_t cap_access_record = {
+				.syscall_id = nr,
+				.pid = pid,
+				.ret = ctx->ret,
+			};
+			#pragma clang loop unroll(full)
+			for (i = 0; i < 6; i++) {
+				cap_access_record.args[i] = remembered->args[i];
+			}
+			bpf_get_current_comm(cap_access_record.comm, sizeof(cap_access_record.comm));
+			bpf_map_update_elem(&caps_records, &cap_access_key, &cap_access_record, BPF_NOEXIST);
+		}
 
 		#pragma clang loop unroll(full)
 		for (i = 0; i < 6; i++) {

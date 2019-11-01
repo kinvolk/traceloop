@@ -19,6 +19,7 @@ import (
 
 /*
 #include "../../bpf/straceback-guess-bpf.h"
+#include "../../bpf/straceback-tailcall-caps.h"
 
 const int MaxTracedPrograms = MAX_TRACED_PROGRAMS;
 const int MaxPooledPrograms = MAX_POOLED_PROGRAMS;
@@ -424,6 +425,32 @@ func (sb *StraceBack) updater() (out string) {
 	}
 }
 
+func (sb *StraceBack) getCapsRecords(i int) error {
+	capsRecordsMap := sb.tracelets[i].tailCallProg.Map("caps_records")
+
+	key := C.struct_cap_access_key_t{}
+	nextKey := C.struct_cap_access_key_t{}
+	value := C.struct_cap_access_record_t{}
+	for {
+		f, err := sb.tracelets[i].tailCallProg.LookupNextElement(capsRecordsMap, unsafe.Pointer(&key), unsafe.Pointer(&nextKey), unsafe.Pointer(&value))
+		if err != nil {
+			return fmt.Errorf("failed trying to lookup the next element: %s", err)
+		}
+		if !f {
+			break
+		}
+
+		key = nextKey
+		fmt.Printf("Tracelet #%d: found:%v - key:%+v (%s %s) value:%v [%s]\n", i, f, key, syscallGetName(int(key.syscall_id)), capDecode(uint64(key.caps)), value, C.GoString(&value.comm[0]))
+
+		if value.pid == 0 {
+			fmt.Printf("error: pid is 0\n")
+			break
+		}
+	}
+	return nil
+}
+
 func (sb *StraceBack) publish() {
 	if sb.annotationPublisher == nil {
 		return
@@ -460,6 +487,10 @@ func (sb *StraceBack) publish() {
 		}
 		tm.Status = sb.tracelets[i].status.String()
 		ts = append(ts, tm)
+
+		if err := sb.getCapsRecords(i); err != nil {
+			fmt.Printf("Cannot get caps records: %v\n", err)
+		}
 	}
 	out, _ := json.Marshal(ts)
 
