@@ -88,6 +88,14 @@ struct bpf_map_def SEC("maps/tail_call_exit") tail_call_exit = {
 	.pinning = 0,
 	.namespace = "",
 };
+struct bpf_map_def SEC("maps/tail_call_caps") tail_call_caps = {
+	.type = BPF_MAP_TYPE_PROG_ARRAY,
+	.key_size = sizeof(__u32),
+	.value_size = sizeof(__u32),
+	.max_entries = MAX_TRACED_PROGRAMS,
+	.pinning = 0,
+	.namespace = "",
+};
 
 struct bpf_map_def SEC("maps/syscalls") syscalls = {
 	.type = BPF_MAP_TYPE_HASH,
@@ -455,8 +463,9 @@ int kprobe__cap_capable(struct pt_regs *ctx)
 		return 0;
 	}
 
-	printt("utsns: %d cap: %d\n", utsns, cap);
 	container_status->caps |= 1 << cap;
+
+	bpf_tail_call((void *)ctx, (void *)&tail_call_caps, container_status->idx);
 
 	return 0;
 }

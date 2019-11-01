@@ -7,6 +7,7 @@ require (
 	github.com/Azure/go-autorest/autorest/adal v0.6.0 // indirect
 	github.com/gophercloud/gophercloud v0.4.0 // indirect
 	github.com/iovisor/gobpf v0.0.0-20190329163444-e0d8d785d368
+	github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2
 	golang.org/x/crypto v0.0.0-20191002192127-34f69633bfdc // indirect
 	golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0 // indirect
 	k8s.io/api v0.0.0-20191004120104-195af9ec3521

@@ -67,6 +67,7 @@ struct syscall_event_t {
 	char comm[TASK_COMM_LEN];
 	__u64 args[6];
 	/* __u64 ret stored in args[0] */
+	/* __u64 caps stored in args[1] */
 };
 
 struct syscall_event_cont_t {

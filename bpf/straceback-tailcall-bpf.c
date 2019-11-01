@@ -42,7 +42,9 @@ struct bpf_map_def SEC("maps/syscalls") syscalls = {
 
 struct remembered_args {
 	u64 timestamp;
+	u64 nr;
 	u64 args[6];
+	u64 caps;
 };
 
 /* This key/value store maps thread PIDs to syscall arg arrays
@@ -96,6 +98,7 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 	};
 	struct remembered_args remembered = {
 		.timestamp = ts,
+		.nr = nr,
 	};
 	struct syscall_def_t *syscall_def;
 	syscall_def = bpf_map_lookup_elem(&syscalls, &nr);
@@ -213,6 +216,8 @@ int tracepoint__sys_exit(struct sys_exit_args *ctx)
 
 	remembered = bpf_map_lookup_elem(&probe_at_sys_exit, &pid);
 	if (remembered) {
+		sc.args[1] = remembered->caps;
+
 		#pragma clang loop unroll(full)
 		for (i = 0; i < 6; i++) {
 			__u64 arg_len = syscall_def->args_len[i];
@@ -283,6 +288,21 @@ int tracepoint__sys_exit(struct sys_exit_args *ctx)
 
 	bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc, sizeof(sc));
 
+	return 0;
+}
+
+SEC("kprobe/cap_capable")
+int kprobe__cap_capable(struct pt_regs *ctx)
+{
+	int cap;
+	cap = (int) PT_REGS_PARM3(ctx);
+
+	u64 pid = bpf_get_current_pid_tgid();
+	struct remembered_args *remembered;
+	remembered = bpf_map_lookup_elem(&probe_at_sys_exit, &pid);
+	if (!remembered)
+		return 0;
+	remembered->caps |= 1 << cap;
 	return 0;
 }
 

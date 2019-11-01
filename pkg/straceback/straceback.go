@@ -93,6 +93,7 @@ type StraceBack struct {
 	cgroupMap             *bpflib.Map
 	tailCallEnter         *bpflib.Map
 	tailCallExit          *bpflib.Map
+	tailCallCaps          *bpflib.Map
 	syscallsDef           *bpflib.Map
 	newContainerEventsMap *bpflib.PerfMap
 
@@ -142,6 +143,7 @@ func NewTracer(withPodDiscovery bool, withProcInformer bool, withAnnotationPubli
 	sb.cgroupMap = sb.mainProg.Map("cgroup_map")
 	sb.tailCallEnter = sb.mainProg.Map("tail_call_enter")
 	sb.tailCallExit = sb.mainProg.Map("tail_call_exit")
+	sb.tailCallCaps = sb.mainProg.Map("tail_call_caps")
 	sb.syscallsDef = sb.mainProg.Map("syscalls")
 
 	for i, _ := range syscallNames {
@@ -173,7 +175,7 @@ func NewTracer(withPodDiscovery bool, withProcInformer bool, withAnnotationPubli
 
 		// init tracelet pool
 		for i := 0; i < int(C.MaxPooledPrograms); i++ {
-			sb.tracelets[i], err = getDummyTracelet(sb.mainProg, sb.tailCallEnter, sb.tailCallExit, uint32(i))
+			sb.tracelets[i], err = getDummyTracelet(sb.mainProg, sb.tailCallEnter, sb.tailCallExit, sb.tailCallCaps, uint32(i))
 			if err != nil {
 				return nil, err
 			}
@@ -476,7 +478,7 @@ func (sb *StraceBack) recycleTracelets() error {
 			sb.CloseProg(uint32(i))
 
 			var err error
-			sb.tracelets[i], err = getDummyTracelet(sb.mainProg, sb.tailCallEnter, sb.tailCallExit, uint32(i))
+			sb.tracelets[i], err = getDummyTracelet(sb.mainProg, sb.tailCallEnter, sb.tailCallExit, sb.tailCallCaps, uint32(i))
 			if err != nil {
 				return err
 			}
@@ -563,7 +565,7 @@ func (sb *StraceBack) List() (out string) {
 	return
 }
 
-func getDummyTracelet(mainProg *bpflib.Module, tailCallEnter *bpflib.Map, tailCallExit *bpflib.Map, idx uint32) (*Tracelet, error) {
+func getDummyTracelet(mainProg *bpflib.Module, tailCallEnter *bpflib.Map, tailCallExit *bpflib.Map, tailCallCaps *bpflib.Map, idx uint32) (*Tracelet, error) {
 	tracelet := Tracelet{
 		eventChan:    make(chan []byte),
 		lostChan:     make(chan uint64),
@@ -603,6 +605,7 @@ func getDummyTracelet(mainProg *bpflib.Module, tailCallEnter *bpflib.Map, tailCa
 
 	var fdEnter int = -1
 	var fdExit int = -1
+	var fdCaps int = -1
 	for tp := range m.IterTracepointProgram() {
 		if tp.Name == "tracepoint/raw_syscalls/sys_enter" {
 			fdEnter = tp.Fd()
@@ -614,10 +617,21 @@ func getDummyTracelet(mainProg *bpflib.Module, tailCallEnter *bpflib.Map, tailCa
 	if fdExit == -1 || fdExit == -1 {
 		return nil, fmt.Errorf("couldn't find tracepoint fd")
 	}
+	for kp := range m.IterKprobes() {
+		if kp.Name == "kprobe/cap_capable" {
+			fdCaps = kp.Fd()
+		}
+	}
+	if fdCaps == -1 {
+		return nil, fmt.Errorf("couldn't find kprobe fd")
+	}
 	if err := mainProg.UpdateElement(tailCallEnter, unsafe.Pointer(&idx), unsafe.Pointer(&fdEnter), 0); err != nil {
 		return nil, fmt.Errorf("error updating tail call enter map: %v", err)
 	}
 	if err := mainProg.UpdateElement(tailCallExit, unsafe.Pointer(&idx), unsafe.Pointer(&fdExit), 0); err != nil {
+		return nil, fmt.Errorf("error updating tail call exit map: %v", err)
+	}
+	if err := mainProg.UpdateElement(tailCallCaps, unsafe.Pointer(&idx), unsafe.Pointer(&fdCaps), 0); err != nil {
 		return nil, fmt.Errorf("error updating tail call exit map: %v", err)
 	}
 
