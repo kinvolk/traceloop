@@ -17,4 +17,4 @@ require (
 	k8s.io/utils v0.0.0-20190923111123-69764acb6e8e // indirect
 )
 
-replace github.com/iovisor/gobpf => github.com/kinvolk/gobpf v0.0.0-20191006160500-a7d6e01aa304
+replace github.com/iovisor/gobpf => github.com/kinvolk/gobpf v0.0.0-20191127154002-f0f89e7c6fd1
