@@ -18,7 +18,11 @@ var (
 	paths     []string
 )
 
+// This variable is set during build.
+var version = "undefined"
+
 func main() {
+	fmt.Printf("traceloop version %v\n", version)
 	if len(os.Args) == 2 && os.Args[1] == "k8s" {
 		withPidns = true
 		serveHttp = true

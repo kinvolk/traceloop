@@ -34,7 +34,6 @@ func init() {
 		fmt.Printf("%v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("List of syscalls loaded.\n")
 }
 
 const syscallsPath = `/sys/kernel/debug/tracing/events/syscalls/`

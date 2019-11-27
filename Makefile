@@ -1,3 +1,16 @@
+TAG := `git describe --tags --always`
+VERSION :=
+
+## Adds a '-dirty' suffix to version string if there are uncommitted changes
+changes := $(shell git status --porcelain)
+ifeq ($(changes),)
+	VERSION := $(TAG)
+else
+	VERSION := $(TAG)-dirty
+endif
+
+VERSIONLDFLAGS := "-X main.version=$(VERSION)"
+
 DEBUG=1
 UID=$(shell id -u)
 PWD=$(shell pwd)
@@ -56,7 +69,10 @@ delete-docker-image:
 	$(SUDO) docker rmi -f $(BUILDER_DOCKER_IMAGE)
 
 bin-traceloop:
-	GO111MODULE=on go build -o traceloop traceloop.go
+	@echo "Building version $(VERSION)"
+	GO111MODULE=on go build \
+		-ldflags $(VERSIONLDFLAGS) \
+		-o traceloop traceloop.go
 
 docker/image:
 	$(SUDO) docker build -t $(DOCKER_IMAGE) -f $(DOCKER_FILE) .
