@@ -275,6 +275,7 @@ func (sb *StraceBack) updater() (out string) {
 					status: C.ContainerStatusReady,
 				}
 				utsns := uint32(sb.tracelets[i].utsns)
+				fmt.Printf("Debug: updating map utsnsMap for %v\n", utsns)
 				if err := sb.mainProg.UpdateElement(utsnsMap, unsafe.Pointer(&utsns), unsafe.Pointer(&cStatus), 0); err != nil {
 					fmt.Printf("error updating utsns map: %v", err)
 					return
