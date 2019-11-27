@@ -257,7 +257,7 @@ func (sb *StraceBack) updater() (out string) {
 				return // see explanation above
 			}
 			for i := 0; i < int(C.MaxPooledPrograms); i++ {
-				if sb.tracelets[i].containerID != info.ContainerID {
+				if sb.tracelets[i] == nil || sb.tracelets[i].containerID != info.ContainerID {
 					continue
 				}
 				sb.tracelets[i].uid = info.UID
@@ -286,7 +286,7 @@ func (sb *StraceBack) updater() (out string) {
 		case <-ticker.C:
 			if sb.podInformer != nil {
 				for i := 0; i < int(C.MaxPooledPrograms); i++ {
-					if sb.tracelets[i].containerID == "" {
+					if sb.tracelets[i] == nil || sb.tracelets[i].containerID == "" {
 						continue
 					}
 					var info *podinformer.ContainerInfo
@@ -331,7 +331,7 @@ func (sb *StraceBack) updater() (out string) {
 				return // see explanation above
 			}
 			for i := 0; i < int(C.MaxPooledPrograms); i++ {
-				if sb.tracelets[i].status != traceletStatusCreated {
+				if sb.tracelets[i] == nil || sb.tracelets[i].status != traceletStatusCreated {
 					continue
 				}
 				if sb.tracelets[i].utsns != info.Utsns {
@@ -460,7 +460,7 @@ func (sb *StraceBack) publish() {
 	var ts []tracemeta.TraceMeta
 
 	for i := 0; i < int(C.MaxPooledPrograms); i++ {
-		if sb.tracelets[i].containerID == "" {
+		if sb.tracelets[i] == nil || sb.tracelets[i].containerID == "" {
 			continue
 		}
 		caps := uint64(0)
@@ -501,7 +501,7 @@ func (sb *StraceBack) publish() {
 func (sb *StraceBack) recycleTracelets() error {
 	newIndexes := []int{}
 	for i := 0; i < int(C.MaxPooledPrograms); i++ {
-		if sb.tracelets[i].status != traceletStatusDeleted {
+		if sb.tracelets[i] == nil || sb.tracelets[i].status != traceletStatusDeleted {
 			continue
 		}
 		fmt.Printf("recycle %d: time %v - %v\n", i, sb.tracelets[i].timeDeletion.Format(time.RFC3339), time.Now())
