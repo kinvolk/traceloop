@@ -493,9 +493,18 @@ func (sb *StraceBack) publish() {
 			fmt.Printf("Cannot get caps records: %v\n", err)
 		}
 	}
-	out, _ := json.Marshal(ts)
 
-	sb.annotationPublisher.Publish(string(out))
+	fmt.Printf("Publishing %d traces\n", len(ts))
+
+	out, err := json.Marshal(ts)
+	if err != nil {
+		fmt.Printf("Error marshalling traces: %v\n", err)
+		return
+	}
+
+	if err := sb.annotationPublisher.Publish(string(out)); err != nil {
+		fmt.Printf("Cannot publish annotation: %v\n%s\n", err, string(out))
+	}
 }
 
 func (sb *StraceBack) recycleTracelets() error {
