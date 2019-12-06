@@ -29,12 +29,11 @@ var (
 )
 
 func init() {
-	err := gatherSyscalls()
+	err := gatherSyscallsStatic()
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("List of syscalls loaded.\n")
 }
 
 const syscallsPath = `/sys/kernel/debug/tracing/events/syscalls/`
@@ -199,12 +198,14 @@ func syscallGetCall(nr int, args [6]uint64, argsStr *[6]*string) string {
 		if i != 0 {
 			ret += ", "
 		}
-		ret += p.Name
 		if i < 6 {
-			ret += fmt.Sprintf("=%v", args[i])
 			if argsStr != nil && argsStr[i] != nil {
-				ret += fmt.Sprintf(" %q", *(*argsStr)[i])
+				ret += fmt.Sprintf("%q", *(*argsStr)[i])
+			} else {
+				ret += fmt.Sprintf("%v", args[i])
 			}
+		} else {
+			ret += p.Name
 		}
 	}
 	ret += ")"
@@ -230,6 +231,24 @@ func syscallGetDef(nr int) (args [6]uint64) {
 	if syscallNames[nr] == "chdir" {
 		return [6]uint64{useNullByteLength, 0, 0, 0, 0, 0}
 	}
+	if syscallNames[nr] == "pivot_root" {
+		return [6]uint64{useNullByteLength, useNullByteLength, 0, 0, 0, 0}
+	}
+	if syscallNames[nr] == "mount" {
+		return [6]uint64{useNullByteLength, useNullByteLength, useNullByteLength, 0, 0, 0}
+	}
+	if syscallNames[nr] == "umount" {
+		return [6]uint64{useNullByteLength, 0, 0, 0, 0, 0}
+	}
+	if syscallNames[nr] == "umount2" {
+		return [6]uint64{useNullByteLength, 0, 0, 0, 0, 0}
+	}
+	if syscallNames[nr] == "sethostname" {
+		return [6]uint64{useNullByteLength, 0, 0, 0, 0, 0}
+	}
+	if syscallNames[nr] == "statfs" {
+		return [6]uint64{useNullByteLength, 0, 0, 0, 0, 0}
+	}
 	if syscallNames[nr] == "stat" {
 		return [6]uint64{useNullByteLength, 0, 0, 0, 0, 0}
 	}
@@ -244,6 +263,9 @@ func syscallGetDef(nr int) (args [6]uint64) {
 	}
 	if syscallNames[nr] == "write" {
 		return [6]uint64{0, useArgIndexAsParamLength + 2, 0, 0, 0, 0}
+	}
+	if syscallNames[nr] == "getcwd" {
+		return [6]uint64{useNullByteLength | paramProbeAtExitMask, 0, 0, 0, 0, 0}
 	}
 	return
 }

@@ -2,8 +2,12 @@ package straceback
 
 import (
 	"fmt"
+	"strings"
+	"syscall"
 	"time"
 	"unsafe"
+
+	"github.com/syndtr/gocapability/capability"
 )
 
 /*
@@ -26,6 +30,7 @@ type Event struct {
 	Comm      string    // The process command (as in /proc/$pid/comm)
 	Args      [6]uint64 // Syscall args
 	Ret       uint64    // Return value
+	Caps      uint64    // Capability bitfield
 	Param     string    // One string parameter
 	ParamIdx  int       // Parameter index
 }
@@ -47,7 +52,7 @@ func eventToGo(data *[]byte) (ret Event) {
 		if eventContC.failed != 0 {
 			ret.Param = "(Pointer deref failed!)"
 		} else if uint64(eventContC.length) == useNullByteLength {
-		        // 0 byte at [C.PARAM_LENGTH - 1] is enforced in BPF code
+			// 0 byte at [C.PARAM_LENGTH - 1] is enforced in BPF code
 			ret.Param = C.GoString(&eventContC.param[0])
 		} else {
 			ret.Param = C.GoStringN(&eventContC.param[0], C.int(eventContC.length))
@@ -65,6 +70,7 @@ func eventToGo(data *[]byte) (ret Event) {
 			}
 		} else { // SYSCALL_EVENT_TYPE_EXIT
 			ret.Ret = uint64(eventC.args[0])
+			ret.Caps = uint64(eventC.args[1])
 		}
 	}
 	return
@@ -89,6 +95,16 @@ func eventTimestamp(data *[]byte) uint64 {
 	return ts
 }
 
+func capDecode(caps uint64) (out string) {
+	for _, c := range capability.List() {
+		if (caps & (1 << uint(c))) != 0 {
+			out += c.String() + ","
+		}
+	}
+	out = strings.TrimSuffix(out, ",")
+	return
+}
+
 func (e Event) String() string {
 	switch e.Typ {
 	case 0:
@@ -101,6 +117,20 @@ func (e Event) String() string {
 		return fmt.Sprintf("%v cpu#%d pid %d [%s] unknown", e.Timestamp, e.CPU, e.Pid, e.Comm)
 	}
 }
+
+func retToStr(ret uint64, caps uint64) string {
+	errNo := int64(ret)
+	if errNo >= -4095 && errNo <= -1 {
+		e := syscall.Errno(-errNo)
+		if (e == syscall.EACCES || e == syscall.EPERM) && caps != 0 {
+			return fmt.Sprintf("-1 (%s) [%s]", syscall.Errno(-errNo).Error(), capDecode(caps))
+		}
+		return fmt.Sprintf("-1 (%s)", syscall.Errno(-errNo).Error())
+	} else {
+		return fmt.Sprintf("%d", ret)
+	}
+}
+
 func eventsToString(events []Event) (ret string) {
 	for i := 0; i < len(events); i++ {
 		e := events[i]
@@ -121,7 +151,7 @@ func eventsToString(events []Event) (ret string) {
 			if e.Typ == 0 && i+1 < len(events) {
 				nextE := events[i+1]
 				if nextE.Typ == 1 && e.Pid == nextE.Pid && e.ID == nextE.ID {
-					returnedValue = fmt.Sprintf(" = %d", nextE.Ret)
+					returnedValue = fmt.Sprintf(" = %s", retToStr(nextE.Ret, nextE.Caps))
 					i++
 				}
 			}
@@ -130,7 +160,7 @@ func eventsToString(events []Event) (ret string) {
 				syscallGetCall(int(e.ID), e.Args, &argsStr),
 				returnedValue)
 		case 1:
-			ret += fmt.Sprintf("%v cpu#%d pid %d [%s] ...%s() = %d\n", timeStr, e.CPU, e.Pid, e.Comm, syscallGetName(int(e.ID)), int(e.Ret))
+			ret += fmt.Sprintf("%v cpu#%d pid %d [%s] ...%s() = %s\n", timeStr, e.CPU, e.Pid, e.Comm, syscallGetName(int(e.ID)), retToStr(e.Ret, e.Caps))
 		case 2:
 			ret += fmt.Sprintf("%v %q\n", timeStr, e.Param)
 		default:

@@ -9,6 +9,7 @@
 #include <linux/bpf.h>
 #include "bpf_helpers.h"
 #include "straceback-tailcall-bpf.h"
+#include "straceback-tailcall-caps.h"
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wtautological-compare"
@@ -40,9 +41,20 @@ struct bpf_map_def SEC("maps/syscalls") syscalls = {
 	.namespace = "straceback",
 };
 
+struct bpf_map_def SEC("maps/caps_records") caps_records = {
+	.type = BPF_MAP_TYPE_HASH,
+	.key_size = sizeof(struct cap_access_key_t),
+	.value_size = sizeof(struct cap_access_record_t),
+	.max_entries = 128,
+	.pinning = 0,
+	.namespace = "",
+};
+
 struct remembered_args {
 	u64 timestamp;
+	u64 nr;
 	u64 args[6];
+	u64 caps;
 };
 
 /* This key/value store maps thread PIDs to syscall arg arrays
@@ -53,9 +65,9 @@ struct bpf_map_def SEC("maps/probe_at_sys_exit") probe_at_sys_exit = {
 	.type = BPF_MAP_TYPE_HASH,
 	.key_size = sizeof(__u64),
 	.value_size = sizeof(struct remembered_args),
-	.max_entries = 128,
-	.pinning = 0,
-	.namespace = "",
+	.max_entries = 1024,
+	.pinning = PIN_GLOBAL_NS,
+	.namespace = "straceback",
 };
 
 struct sys_enter_args {
@@ -78,6 +90,16 @@ struct sys_exit_args {
 	unsigned long ret;
 };
 
+__attribute__((always_inline))
+static int skip_exit_probe(int nr) {
+	#define NR_EXIT 60
+	#define NR_EXIT_GROUP 231
+
+	if (nr == NR_EXIT || nr == NR_EXIT_GROUP)
+		return 1;
+	return 0;
+}
+
 SEC("tracepoint/raw_syscalls/sys_enter")
 int tracepoint__sys_enter(struct sys_enter_args *ctx)
 {
@@ -96,6 +118,7 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 	};
 	struct remembered_args remembered = {
 		.timestamp = ts,
+		.nr = nr,
 	};
 	struct syscall_def_t *syscall_def;
 	syscall_def = bpf_map_lookup_elem(&syscalls, &nr);
@@ -113,7 +136,13 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 
 	bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc, sizeof(sc));
 
-	bpf_map_update_elem(&probe_at_sys_exit, &pid, &remembered, BPF_ANY);
+	// Avoid using probe_at_sys_exit for exit() and exit_group() because sys_exit
+	// would not be called and the map would not be cleaned up and would get full.
+	// Note that a process can still get killed in the middle, so we would need
+	// a userspace cleaner for this case (TODO).
+	if (!skip_exit_probe(nr)) {
+		bpf_map_update_elem(&probe_at_sys_exit, &pid, &remembered, BPF_ANY);
+	}
 
 	#pragma clang loop unroll(full)
 	for (i = 0; i < 6; i++) {
@@ -157,8 +186,26 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 			else
 				sc_cont.length = arg_len;
 
-			if (bpf_probe_read(sc_cont.param, arg_len, (void *)(ctx->args[i]))) {
+			// Call bpf_probe_read() with a constant size to avoid errors on 4.14.137+
+			// invalid stack type R1 off=-304 access_size=0
+			// Possibly related:
+			// https://github.com/torvalds/linux/commit/9fd29c08e52023252f0480ab8f6906a1ecc9a8d5
+			switch (arg_len) {
+			case 0:
 				sc_cont.failed = true;
+				break;
+#define UNROLL_CASE(len) \
+			case (len): \
+				if (bpf_probe_read(sc_cont.param, (len), (void *)(ctx->args[i]))) { \
+					sc_cont.failed = true; \
+				} \
+				break;
+			UNROLL_CASE(1) UNROLL_CASE(2) UNROLL_CASE(3) UNROLL_CASE(4) UNROLL_CASE(5)
+			UNROLL_CASE(6) UNROLL_CASE(7) UNROLL_CASE(8)
+			default:
+				if (bpf_probe_read(sc_cont.param, PARAM_LEN, (void *)(ctx->args[i]))) {
+					sc_cont.failed = true;
+				}
 			}
 			bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc_cont, sizeof(sc_cont));
 		}
@@ -195,6 +242,26 @@ int tracepoint__sys_exit(struct sys_exit_args *ctx)
 
 	remembered = bpf_map_lookup_elem(&probe_at_sys_exit, &pid);
 	if (remembered) {
+		if (remembered->caps != 0) {
+			sc.args[1] = remembered->caps;
+
+			struct cap_access_key_t cap_access_key = {
+				.syscall_id = nr,
+				.caps = remembered->caps,
+			};
+			struct cap_access_record_t cap_access_record = {
+				.syscall_id = nr,
+				.pid = pid,
+				.ret = ctx->ret,
+			};
+			#pragma clang loop unroll(full)
+			for (i = 0; i < 6; i++) {
+				cap_access_record.args[i] = remembered->args[i];
+			}
+			bpf_get_current_comm(cap_access_record.comm, sizeof(cap_access_record.comm));
+			bpf_map_update_elem(&caps_records, &cap_access_key, &cap_access_record, BPF_NOEXIST);
+		}
+
 		#pragma clang loop unroll(full)
 		for (i = 0; i < 6; i++) {
 			__u64 arg_len = syscall_def->args_len[i];
@@ -233,8 +300,27 @@ int tracepoint__sys_exit(struct sys_exit_args *ctx)
 				else
 					sc_cont.length = arg_len;
 
-				if (bpf_probe_read(sc_cont.param, arg_len, (void *)(remembered->args[i]))) {
+				// On Linux 4.14.137+, calling bpf_probe_read() with a variable size causes:
+				// "invalid stack type R1 off=-304 access_size=0"
+				// This is fixed on newer kernels.
+				//
+				// I know arg_len is not a volatile but that stops the compiler from
+				// optimising the ifs into one bpf_probe_read call with a variable size.
+				if (arg_len == 0) {
 					sc_cont.failed = true;
+				}
+#define UNROLL_TEST(len) \
+				else if ((volatile __u64)arg_len == (len)) { \
+					if (bpf_probe_read(sc_cont.param, (len), (void *)(remembered->args[i]))) { \
+						sc_cont.failed = true; \
+					} \
+				}
+				UNROLL_TEST(1) UNROLL_TEST(2) UNROLL_TEST(3) UNROLL_TEST(4)
+				UNROLL_TEST(5) UNROLL_TEST(6) UNROLL_TEST(7) UNROLL_TEST(8)
+				else {
+					if (bpf_probe_read(sc_cont.param, PARAM_LEN, (void *)(remembered->args[i]))) {
+						sc_cont.failed = true;
+					}
 				}
 				bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc_cont, sizeof(sc_cont));
 			}
@@ -243,8 +329,24 @@ int tracepoint__sys_exit(struct sys_exit_args *ctx)
 	}
 
 	bpf_get_current_comm(sc.comm, sizeof(sc.comm));
+
 	bpf_perf_event_output(ctx, &events, BPF_F_CURRENT_CPU, &sc, sizeof(sc));
 
+	return 0;
+}
+
+SEC("kprobe/cap_capable")
+int kprobe__cap_capable(struct pt_regs *ctx)
+{
+	int cap;
+	cap = (int) PT_REGS_PARM3(ctx);
+
+	u64 pid = bpf_get_current_pid_tgid();
+	struct remembered_args *remembered;
+	remembered = bpf_map_lookup_elem(&probe_at_sys_exit, &pid);
+	if (!remembered)
+		return 0;
+	remembered->caps |= 1 << cap;
 	return 0;
 }
 

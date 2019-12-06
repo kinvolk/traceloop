@@ -14,20 +14,46 @@ import (
 
 var (
 	serveHttp bool
+	withPidns bool
 	paths     []string
 )
 
+// This variable is set during build.
+var version = "undefined"
+
 func main() {
+	fmt.Printf("traceloop version %v\n", version)
+	if len(os.Args) == 2 && os.Args[1] == "k8s" {
+		withPidns = true
+		serveHttp = true
+	}
+
+	if len(os.Args) == 2 && os.Args[1] == "guess" {
+		withPidns = true
+	}
+
 	if len(os.Args) == 2 && os.Args[1] == "serve" {
 		serveHttp = true
 	} else {
 		paths = os.Args[1:]
 	}
 
-	t, err := straceback.NewTracer()
+	t, err := straceback.NewTracer(withPidns, withPidns, withPidns)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
+	}
+
+	if withPidns && !serveHttp {
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, os.Interrupt, os.Kill)
+		select {
+		case <-sig:
+			fmt.Printf("Interrupted!\n")
+			break
+		}
+		t.DumpAll()
+		os.Exit(0)
 	}
 
 	if serveHttp {
@@ -59,6 +85,16 @@ func main() {
 			fmt.Fprintf(w, "%s", out)
 		}
 
+		dumpByTraceidHandler := func(w http.ResponseWriter, r *http.Request) {
+			traceidStr := r.FormValue("traceid")
+			out, err := t.DumpProgByTraceid(traceidStr)
+			if err != nil {
+				fmt.Fprintf(w, "%v\n", err)
+				return
+			}
+			fmt.Fprintf(w, "%s", out)
+		}
+
 		dumpByCgroupHandler := func(w http.ResponseWriter, r *http.Request) {
 			cgroupStr := r.FormValue("cgroup")
 			out, err := t.DumpProgByCgroup(cgroupStr)
@@ -81,6 +117,28 @@ func main() {
 				return
 			}
 			out, err := t.DumpProg(uint32(id))
+			if err != nil {
+				fmt.Fprintf(w, "%v\n", err)
+				return
+			}
+			fmt.Fprintf(w, "%s", out)
+		}
+
+		dumpPodHandler := func(w http.ResponseWriter, r *http.Request) {
+			namespaceStr := r.FormValue("namespace")
+			podnameStr := r.FormValue("podname")
+			idxStr := r.FormValue("idx")
+			if idxStr == "" {
+				fmt.Fprintf(w, "parameter idx missing\n")
+				return
+			}
+			idx, err := strconv.Atoi(idxStr)
+			if err != nil {
+				fmt.Fprintf(w, "%v\n", err)
+				return
+			}
+
+			out, err := t.DumpPod(namespaceStr, podnameStr, idx)
 			if err != nil {
 				fmt.Fprintf(w, "%v\n", err)
 				return
@@ -120,8 +178,10 @@ func main() {
 		http.HandleFunc("/list", listHandler)
 		http.HandleFunc("/add", addHandler)
 		http.HandleFunc("/dump", dumpHandler)
+		http.HandleFunc("/dump-pod", dumpPodHandler)
 		http.HandleFunc("/dump-by-name", dumpByNameHandler)
 		http.HandleFunc("/dump-by-cgroup", dumpByCgroupHandler)
+		http.HandleFunc("/dump-by-traceid", dumpByTraceidHandler)
 		http.HandleFunc("/close", closeHandler)
 		http.HandleFunc("/close-by-name", closeByNameHandler)
 		server := http.Server{}
@@ -152,10 +212,10 @@ func main() {
 LOOP:
 	for {
 		select {
-			case <-ticker:
-			case <-sig:
-				fmt.Printf("Interrupted!\n")
-				break LOOP
+		case <-ticker:
+		case <-sig:
+			fmt.Printf("Interrupted!\n")
+			break LOOP
 		}
 
 		for _, id := range ids {
