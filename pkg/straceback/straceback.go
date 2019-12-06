@@ -905,7 +905,9 @@ func (sb *StraceBack) CloseProgByName(name string) (err error) {
 
 func (sb *StraceBack) Stop() {
 	close(sb.stopChan)
-	sb.newContainerEventsMap.PollStop()
+	if sb.newContainerEventsMap != nil {
+		sb.newContainerEventsMap.PollStop()
+	}
 	for i, _ := range sb.tracelets {
 		if sb.tracelets[i] != nil {
 			sb.tracelets[i].pm.PollStop()
