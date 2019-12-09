@@ -20,14 +20,14 @@ used with systemd services that are in their own control groups (look for
 
 Example with an existing systemd service:
 ```
-sudo -E ./traceloop /sys/fs/cgroup/unified/system.slice/sshd.service
+sudo -E ./traceloop cgroups /sys/fs/cgroup/unified/system.slice/sshd.service
 ```
 
 Example with a custom command:
 ```
 sudo systemd-run -t  --unit=test42.service  /bin/sh -c 'for i in $(seq 1 1000) ; do sleep 4 ; echo 2*3*7 | bc > /dev/null ; echo Multiplication $i done. ; done'
 ...
-sudo -E ./traceloop /sys/fs/cgroup/unified/system.slice/test42.service
+sudo -E ./traceloop cgroups /sys/fs/cgroup/unified/system.slice/test42.service
 ...
 00:04.022260640 cpu#0 pid 23981 [bc] brk(brk=0) = 94045092683776
 00:04.022346588 cpu#0 pid 23981 [bc] ioctl(fd=0, cmd=21505, arg=140721805741680) = 18446744073709551591

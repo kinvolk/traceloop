@@ -893,6 +893,13 @@ func (sb *StraceBack) CloseProg(id uint32) (err error) {
 	return
 }
 
+func (sb *StraceBack) GetCgroupPath(id uint32) (out string, err error) {
+	if id >= uint32(C.MaxTracedPrograms) || sb.tracelets[id] == nil {
+		return "", fmt.Errorf("invalid index")
+	}
+	return sb.tracelets[id].cgroupPath, nil
+}
+
 func (sb *StraceBack) CloseProgByName(name string) (err error) {
 	for i := 0; i < int(C.MaxTracedPrograms); i++ {
 		if sb.tracelets[i] != nil && sb.tracelets[i].description == name {
