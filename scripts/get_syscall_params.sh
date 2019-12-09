@@ -8,18 +8,20 @@ echo 'func gatherSyscallsStatic() error {'
 echo '	cSyscalls = make(map[string]Syscall)'
 echo
 echo '	var err error'
+echo '	var name string'
 echo '	var cSyscall *Syscall'
 echo ''
 sudo find /sys/kernel/debug/tracing/events/syscalls/ -name 'sys_enter_*' -type d | \
 cut --characters=53- | \
 while read name ; do
-  echo -n "	cSyscall, err = parseSyscall(\"${name}\", string(\`"
+  echo "	name = relateSyscallName(\"${name}\")"
+  echo -n "	cSyscall, err = parseSyscall(name, string(\`"
   sudo cat /sys/kernel/debug/tracing/events/syscalls/sys_enter_${name}/format
   echo "\`))"
   echo "	if err != nil {"
   echo "		return err"
   echo "	}"
-  echo "	cSyscalls[\"${name}\"] = *cSyscall"
+  echo "	cSyscalls[name] = *cSyscall"
 done
 echo '	return nil'
 echo '}'

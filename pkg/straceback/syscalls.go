@@ -130,6 +130,28 @@ func parseSyscall(name, format string) (*Syscall, error) {
 	}, nil
 }
 
+// Map sys_enter_NAME to syscall name as in /usr/include/asm/unistd_64.h
+func relateSyscallName(name string) string {
+	switch name {
+	case "newfstat":
+		return "fstat"
+	case "newlstat":
+		return "lstat"
+	case "newstat":
+		return "stat"
+	case "newuname":
+		return "uname"
+	case "sendfile64":
+		return "sendfile"
+	case "sysctl":
+		return "_sysctl"
+	case "umount":
+		return "umount2"
+	default:
+		return name
+	}
+}
+
 func gatherSyscalls() error {
 	cSyscalls = make(map[string]Syscall)
 	err := filepath.Walk(syscallsPath, func(path string, f os.FileInfo, err error) error {
@@ -151,6 +173,7 @@ func gatherSyscalls() error {
 		}
 
 		syscallName := strings.TrimPrefix(eventName, "sys_enter_")
+		syscallName = relateSyscallName(syscallName)
 
 		formatFilePath := filepath.Join(syscallsPath, eventName, "format")
 		formatFile, err := os.Open(formatFilePath)
@@ -236,9 +259,6 @@ func syscallGetDef(nr int) (args [6]uint64) {
 	}
 	if syscallNames[nr] == "mount" {
 		return [6]uint64{useNullByteLength, useNullByteLength, useNullByteLength, 0, 0, 0}
-	}
-	if syscallNames[nr] == "umount" {
-		return [6]uint64{useNullByteLength, 0, 0, 0, 0, 0}
 	}
 	if syscallNames[nr] == "umount2" {
 		return [6]uint64{useNullByteLength, 0, 0, 0, 0, 0}
