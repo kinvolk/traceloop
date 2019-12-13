@@ -412,7 +412,7 @@ func (sb *StraceBack) updater() (out string) {
 				eventC.pid>>32, eventC.pid&0xFFFFFFFF)
 			fmt.Printf("    %s %s (%s)\n", containerID, podUid, C.GoString(&eventC.param[0]))
 
-			if eventC.idx < C.uint(C.MaxPooledPrograms) {
+			if eventC.idx < C.uint(C.MaxPooledPrograms) && sb.tracelets[eventC.idx] != nil {
 				sb.tracelets[eventC.idx].traceID = fmt.Sprintf("%016x", uint64(eventC.timestamp))
 				sb.tracelets[eventC.idx].utsns = uint32(eventC.utsns)
 				sb.tracelets[eventC.idx].comm = C.GoString(&eventC.comm[0])
