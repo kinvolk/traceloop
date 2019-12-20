@@ -7,10 +7,12 @@ func gatherSyscallsStatic() error {
 	cSyscalls = make(map[string]Syscall)
 
 	var err error
+	var name string
 	var cSyscall *Syscall
 
-	cSyscall, err = parseSyscall("socket", string(`name: sys_enter_socket
-ID: 1322
+	name = relateSyscallName("socket")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_socket
+ID: 1356
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -27,9 +29,10 @@ print fmt: "family: 0x%08lx, type: 0x%08lx, protocol: 0x%08lx", ((unsigned long)
 	if err != nil {
 		return err
 	}
-	cSyscalls["socket"] = *cSyscall
-	cSyscall, err = parseSyscall("socketpair", string(`name: sys_enter_socketpair
-ID: 1320
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("socketpair")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_socketpair
+ID: 1354
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -47,9 +50,10 @@ print fmt: "family: 0x%08lx, type: 0x%08lx, protocol: 0x%08lx, usockvec: 0x%08lx
 	if err != nil {
 		return err
 	}
-	cSyscalls["socketpair"] = *cSyscall
-	cSyscall, err = parseSyscall("bind", string(`name: sys_enter_bind
-ID: 1318
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("bind")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_bind
+ID: 1352
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -66,9 +70,10 @@ print fmt: "fd: 0x%08lx, umyaddr: 0x%08lx, addrlen: 0x%08lx", ((unsigned long)(R
 	if err != nil {
 		return err
 	}
-	cSyscalls["bind"] = *cSyscall
-	cSyscall, err = parseSyscall("listen", string(`name: sys_enter_listen
-ID: 1316
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("listen")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_listen
+ID: 1350
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -84,9 +89,10 @@ print fmt: "fd: 0x%08lx, backlog: 0x%08lx", ((unsigned long)(REC->fd)), ((unsign
 	if err != nil {
 		return err
 	}
-	cSyscalls["listen"] = *cSyscall
-	cSyscall, err = parseSyscall("accept4", string(`name: sys_enter_accept4
-ID: 1314
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("accept4")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_accept4
+ID: 1348
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -104,9 +110,10 @@ print fmt: "fd: 0x%08lx, upeer_sockaddr: 0x%08lx, upeer_addrlen: 0x%08lx, flags:
 	if err != nil {
 		return err
 	}
-	cSyscalls["accept4"] = *cSyscall
-	cSyscall, err = parseSyscall("accept", string(`name: sys_enter_accept
-ID: 1312
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("accept")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_accept
+ID: 1346
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -123,9 +130,10 @@ print fmt: "fd: 0x%08lx, upeer_sockaddr: 0x%08lx, upeer_addrlen: 0x%08lx", ((uns
 	if err != nil {
 		return err
 	}
-	cSyscalls["accept"] = *cSyscall
-	cSyscall, err = parseSyscall("connect", string(`name: sys_enter_connect
-ID: 1310
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("connect")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_connect
+ID: 1344
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -142,9 +150,10 @@ print fmt: "fd: 0x%08lx, uservaddr: 0x%08lx, addrlen: 0x%08lx", ((unsigned long)
 	if err != nil {
 		return err
 	}
-	cSyscalls["connect"] = *cSyscall
-	cSyscall, err = parseSyscall("getsockname", string(`name: sys_enter_getsockname
-ID: 1308
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getsockname")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getsockname
+ID: 1342
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -161,9 +170,10 @@ print fmt: "fd: 0x%08lx, usockaddr: 0x%08lx, usockaddr_len: 0x%08lx", ((unsigned
 	if err != nil {
 		return err
 	}
-	cSyscalls["getsockname"] = *cSyscall
-	cSyscall, err = parseSyscall("getpeername", string(`name: sys_enter_getpeername
-ID: 1306
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getpeername")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getpeername
+ID: 1340
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -180,9 +190,10 @@ print fmt: "fd: 0x%08lx, usockaddr: 0x%08lx, usockaddr_len: 0x%08lx", ((unsigned
 	if err != nil {
 		return err
 	}
-	cSyscalls["getpeername"] = *cSyscall
-	cSyscall, err = parseSyscall("sendto", string(`name: sys_enter_sendto
-ID: 1304
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sendto")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sendto
+ID: 1338
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -202,9 +213,10 @@ print fmt: "fd: 0x%08lx, buff: 0x%08lx, len: 0x%08lx, flags: 0x%08lx, addr: 0x%0
 	if err != nil {
 		return err
 	}
-	cSyscalls["sendto"] = *cSyscall
-	cSyscall, err = parseSyscall("recvfrom", string(`name: sys_enter_recvfrom
-ID: 1302
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("recvfrom")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_recvfrom
+ID: 1336
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -224,9 +236,10 @@ print fmt: "fd: 0x%08lx, ubuf: 0x%08lx, size: 0x%08lx, flags: 0x%08lx, addr: 0x%
 	if err != nil {
 		return err
 	}
-	cSyscalls["recvfrom"] = *cSyscall
-	cSyscall, err = parseSyscall("setsockopt", string(`name: sys_enter_setsockopt
-ID: 1300
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("setsockopt")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_setsockopt
+ID: 1334
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -245,9 +258,10 @@ print fmt: "fd: 0x%08lx, level: 0x%08lx, optname: 0x%08lx, optval: 0x%08lx, optl
 	if err != nil {
 		return err
 	}
-	cSyscalls["setsockopt"] = *cSyscall
-	cSyscall, err = parseSyscall("getsockopt", string(`name: sys_enter_getsockopt
-ID: 1298
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getsockopt")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getsockopt
+ID: 1332
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -266,9 +280,10 @@ print fmt: "fd: 0x%08lx, level: 0x%08lx, optname: 0x%08lx, optval: 0x%08lx, optl
 	if err != nil {
 		return err
 	}
-	cSyscalls["getsockopt"] = *cSyscall
-	cSyscall, err = parseSyscall("shutdown", string(`name: sys_enter_shutdown
-ID: 1296
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("shutdown")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_shutdown
+ID: 1330
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -284,9 +299,10 @@ print fmt: "fd: 0x%08lx, how: 0x%08lx", ((unsigned long)(REC->fd)), ((unsigned l
 	if err != nil {
 		return err
 	}
-	cSyscalls["shutdown"] = *cSyscall
-	cSyscall, err = parseSyscall("sendmsg", string(`name: sys_enter_sendmsg
-ID: 1294
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sendmsg")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sendmsg
+ID: 1328
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -303,9 +319,10 @@ print fmt: "fd: 0x%08lx, msg: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC->fd
 	if err != nil {
 		return err
 	}
-	cSyscalls["sendmsg"] = *cSyscall
-	cSyscall, err = parseSyscall("sendmmsg", string(`name: sys_enter_sendmmsg
-ID: 1292
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sendmmsg")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sendmmsg
+ID: 1326
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -323,9 +340,10 @@ print fmt: "fd: 0x%08lx, mmsg: 0x%08lx, vlen: 0x%08lx, flags: 0x%08lx", ((unsign
 	if err != nil {
 		return err
 	}
-	cSyscalls["sendmmsg"] = *cSyscall
-	cSyscall, err = parseSyscall("recvmsg", string(`name: sys_enter_recvmsg
-ID: 1290
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("recvmsg")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_recvmsg
+ID: 1324
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -342,9 +360,10 @@ print fmt: "fd: 0x%08lx, msg: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC->fd
 	if err != nil {
 		return err
 	}
-	cSyscalls["recvmsg"] = *cSyscall
-	cSyscall, err = parseSyscall("recvmmsg", string(`name: sys_enter_recvmmsg
-ID: 1288
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("recvmmsg")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_recvmmsg
+ID: 1322
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -363,9 +382,10 @@ print fmt: "fd: 0x%08lx, mmsg: 0x%08lx, vlen: 0x%08lx, flags: 0x%08lx, timeout: 
 	if err != nil {
 		return err
 	}
-	cSyscalls["recvmmsg"] = *cSyscall
-	cSyscall, err = parseSyscall("getrandom", string(`name: sys_enter_getrandom
-ID: 1144
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getrandom")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getrandom
+ID: 1173
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -382,9 +402,10 @@ print fmt: "buf: 0x%08lx, count: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC-
 	if err != nil {
 		return err
 	}
-	cSyscalls["getrandom"] = *cSyscall
-	cSyscall, err = parseSyscall("ioprio_set", string(`name: sys_enter_ioprio_set
-ID: 1109
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("ioprio_set")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_ioprio_set
+ID: 1136
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -401,9 +422,10 @@ print fmt: "which: 0x%08lx, who: 0x%08lx, ioprio: 0x%08lx", ((unsigned long)(REC
 	if err != nil {
 		return err
 	}
-	cSyscalls["ioprio_set"] = *cSyscall
-	cSyscall, err = parseSyscall("ioprio_get", string(`name: sys_enter_ioprio_get
-ID: 1107
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("ioprio_get")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_ioprio_get
+ID: 1134
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -419,9 +441,10 @@ print fmt: "which: 0x%08lx, who: 0x%08lx", ((unsigned long)(REC->which)), ((unsi
 	if err != nil {
 		return err
 	}
-	cSyscalls["ioprio_get"] = *cSyscall
-	cSyscall, err = parseSyscall("add_key", string(`name: sys_enter_add_key
-ID: 1087
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("add_key")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_add_key
+ID: 1114
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -440,9 +463,10 @@ print fmt: "_type: 0x%08lx, _description: 0x%08lx, _payload: 0x%08lx, plen: 0x%0
 	if err != nil {
 		return err
 	}
-	cSyscalls["add_key"] = *cSyscall
-	cSyscall, err = parseSyscall("request_key", string(`name: sys_enter_request_key
-ID: 1085
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("request_key")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_request_key
+ID: 1112
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -460,9 +484,10 @@ print fmt: "_type: 0x%08lx, _description: 0x%08lx, _callout_info: 0x%08lx, destr
 	if err != nil {
 		return err
 	}
-	cSyscalls["request_key"] = *cSyscall
-	cSyscall, err = parseSyscall("keyctl", string(`name: sys_enter_keyctl
-ID: 1083
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("keyctl")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_keyctl
+ID: 1110
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -481,9 +506,10 @@ print fmt: "option: 0x%08lx, arg2: 0x%08lx, arg3: 0x%08lx, arg4: 0x%08lx, arg5: 
 	if err != nil {
 		return err
 	}
-	cSyscalls["keyctl"] = *cSyscall
-	cSyscall, err = parseSyscall("mq_open", string(`name: sys_enter_mq_open
-ID: 1081
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mq_open")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mq_open
+ID: 1108
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -501,9 +527,10 @@ print fmt: "u_name: 0x%08lx, oflag: 0x%08lx, mode: 0x%08lx, u_attr: 0x%08lx", ((
 	if err != nil {
 		return err
 	}
-	cSyscalls["mq_open"] = *cSyscall
-	cSyscall, err = parseSyscall("mq_unlink", string(`name: sys_enter_mq_unlink
-ID: 1079
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mq_unlink")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mq_unlink
+ID: 1106
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -518,9 +545,10 @@ print fmt: "u_name: 0x%08lx", ((unsigned long)(REC->u_name))
 	if err != nil {
 		return err
 	}
-	cSyscalls["mq_unlink"] = *cSyscall
-	cSyscall, err = parseSyscall("mq_timedsend", string(`name: sys_enter_mq_timedsend
-ID: 1077
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mq_timedsend")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mq_timedsend
+ID: 1104
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -539,9 +567,10 @@ print fmt: "mqdes: 0x%08lx, u_msg_ptr: 0x%08lx, msg_len: 0x%08lx, msg_prio: 0x%0
 	if err != nil {
 		return err
 	}
-	cSyscalls["mq_timedsend"] = *cSyscall
-	cSyscall, err = parseSyscall("mq_timedreceive", string(`name: sys_enter_mq_timedreceive
-ID: 1075
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mq_timedreceive")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mq_timedreceive
+ID: 1102
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -560,9 +589,10 @@ print fmt: "mqdes: 0x%08lx, u_msg_ptr: 0x%08lx, msg_len: 0x%08lx, u_msg_prio: 0x
 	if err != nil {
 		return err
 	}
-	cSyscalls["mq_timedreceive"] = *cSyscall
-	cSyscall, err = parseSyscall("mq_notify", string(`name: sys_enter_mq_notify
-ID: 1073
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mq_notify")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mq_notify
+ID: 1100
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -578,9 +608,10 @@ print fmt: "mqdes: 0x%08lx, u_notification: 0x%08lx", ((unsigned long)(REC->mqde
 	if err != nil {
 		return err
 	}
-	cSyscalls["mq_notify"] = *cSyscall
-	cSyscall, err = parseSyscall("mq_getsetattr", string(`name: sys_enter_mq_getsetattr
-ID: 1071
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mq_getsetattr")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mq_getsetattr
+ID: 1098
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -597,9 +628,10 @@ print fmt: "mqdes: 0x%08lx, u_mqstat: 0x%08lx, u_omqstat: 0x%08lx", ((unsigned l
 	if err != nil {
 		return err
 	}
-	cSyscalls["mq_getsetattr"] = *cSyscall
-	cSyscall, err = parseSyscall("shmget", string(`name: sys_enter_shmget
-ID: 1069
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("shmget")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_shmget
+ID: 1096
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -616,9 +648,10 @@ print fmt: "key: 0x%08lx, size: 0x%08lx, shmflg: 0x%08lx", ((unsigned long)(REC-
 	if err != nil {
 		return err
 	}
-	cSyscalls["shmget"] = *cSyscall
-	cSyscall, err = parseSyscall("shmctl", string(`name: sys_enter_shmctl
-ID: 1067
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("shmctl")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_shmctl
+ID: 1094
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -635,9 +668,10 @@ print fmt: "shmid: 0x%08lx, cmd: 0x%08lx, buf: 0x%08lx", ((unsigned long)(REC->s
 	if err != nil {
 		return err
 	}
-	cSyscalls["shmctl"] = *cSyscall
-	cSyscall, err = parseSyscall("shmat", string(`name: sys_enter_shmat
-ID: 1065
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("shmat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_shmat
+ID: 1092
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -654,9 +688,10 @@ print fmt: "shmid: 0x%08lx, shmaddr: 0x%08lx, shmflg: 0x%08lx", ((unsigned long)
 	if err != nil {
 		return err
 	}
-	cSyscalls["shmat"] = *cSyscall
-	cSyscall, err = parseSyscall("shmdt", string(`name: sys_enter_shmdt
-ID: 1063
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("shmdt")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_shmdt
+ID: 1090
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -671,9 +706,10 @@ print fmt: "shmaddr: 0x%08lx", ((unsigned long)(REC->shmaddr))
 	if err != nil {
 		return err
 	}
-	cSyscalls["shmdt"] = *cSyscall
-	cSyscall, err = parseSyscall("semget", string(`name: sys_enter_semget
-ID: 1061
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("semget")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_semget
+ID: 1088
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -690,9 +726,10 @@ print fmt: "key: 0x%08lx, nsems: 0x%08lx, semflg: 0x%08lx", ((unsigned long)(REC
 	if err != nil {
 		return err
 	}
-	cSyscalls["semget"] = *cSyscall
-	cSyscall, err = parseSyscall("semctl", string(`name: sys_enter_semctl
-ID: 1059
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("semctl")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_semctl
+ID: 1086
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -710,9 +747,10 @@ print fmt: "semid: 0x%08lx, semnum: 0x%08lx, cmd: 0x%08lx, arg: 0x%08lx", ((unsi
 	if err != nil {
 		return err
 	}
-	cSyscalls["semctl"] = *cSyscall
-	cSyscall, err = parseSyscall("semtimedop", string(`name: sys_enter_semtimedop
-ID: 1057
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("semtimedop")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_semtimedop
+ID: 1084
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -730,9 +768,10 @@ print fmt: "semid: 0x%08lx, tsops: 0x%08lx, nsops: 0x%08lx, timeout: 0x%08lx", (
 	if err != nil {
 		return err
 	}
-	cSyscalls["semtimedop"] = *cSyscall
-	cSyscall, err = parseSyscall("semop", string(`name: sys_enter_semop
-ID: 1055
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("semop")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_semop
+ID: 1082
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -749,9 +788,10 @@ print fmt: "semid: 0x%08lx, tsops: 0x%08lx, nsops: 0x%08lx", ((unsigned long)(RE
 	if err != nil {
 		return err
 	}
-	cSyscalls["semop"] = *cSyscall
-	cSyscall, err = parseSyscall("msgget", string(`name: sys_enter_msgget
-ID: 1053
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("msgget")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_msgget
+ID: 1080
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -767,9 +807,10 @@ print fmt: "key: 0x%08lx, msgflg: 0x%08lx", ((unsigned long)(REC->key)), ((unsig
 	if err != nil {
 		return err
 	}
-	cSyscalls["msgget"] = *cSyscall
-	cSyscall, err = parseSyscall("msgctl", string(`name: sys_enter_msgctl
-ID: 1051
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("msgctl")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_msgctl
+ID: 1078
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -786,9 +827,10 @@ print fmt: "msqid: 0x%08lx, cmd: 0x%08lx, buf: 0x%08lx", ((unsigned long)(REC->m
 	if err != nil {
 		return err
 	}
-	cSyscalls["msgctl"] = *cSyscall
-	cSyscall, err = parseSyscall("msgsnd", string(`name: sys_enter_msgsnd
-ID: 1049
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("msgsnd")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_msgsnd
+ID: 1076
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -806,9 +848,10 @@ print fmt: "msqid: 0x%08lx, msgp: 0x%08lx, msgsz: 0x%08lx, msgflg: 0x%08lx", ((u
 	if err != nil {
 		return err
 	}
-	cSyscalls["msgsnd"] = *cSyscall
-	cSyscall, err = parseSyscall("msgrcv", string(`name: sys_enter_msgrcv
-ID: 1047
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("msgrcv")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_msgrcv
+ID: 1074
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -827,9 +870,10 @@ print fmt: "msqid: 0x%08lx, msgp: 0x%08lx, msgsz: 0x%08lx, msgtyp: 0x%08lx, msgf
 	if err != nil {
 		return err
 	}
-	cSyscalls["msgrcv"] = *cSyscall
-	cSyscall, err = parseSyscall("lookup_dcookie", string(`name: sys_enter_lookup_dcookie
-ID: 924
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("lookup_dcookie")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_lookup_dcookie
+ID: 951
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -846,9 +890,10 @@ print fmt: "cookie64: 0x%08lx, buf: 0x%08lx, len: 0x%08lx", ((unsigned long)(REC
 	if err != nil {
 		return err
 	}
-	cSyscalls["lookup_dcookie"] = *cSyscall
-	cSyscall, err = parseSyscall("quotactl", string(`name: sys_enter_quotactl
-ID: 922
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("quotactl")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_quotactl
+ID: 949
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -866,9 +911,10 @@ print fmt: "cmd: 0x%08lx, special: 0x%08lx, id: 0x%08lx, addr: 0x%08lx", ((unsig
 	if err != nil {
 		return err
 	}
-	cSyscalls["quotactl"] = *cSyscall
-	cSyscall, err = parseSyscall("name_to_handle_at", string(`name: sys_enter_name_to_handle_at
-ID: 920
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("name_to_handle_at")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_name_to_handle_at
+ID: 947
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -887,9 +933,10 @@ print fmt: "dfd: 0x%08lx, name: 0x%08lx, handle: 0x%08lx, mnt_id: 0x%08lx, flag:
 	if err != nil {
 		return err
 	}
-	cSyscalls["name_to_handle_at"] = *cSyscall
-	cSyscall, err = parseSyscall("open_by_handle_at", string(`name: sys_enter_open_by_handle_at
-ID: 918
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("open_by_handle_at")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_open_by_handle_at
+ID: 945
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -906,9 +953,10 @@ print fmt: "mountdirfd: 0x%08lx, handle: 0x%08lx, flags: 0x%08lx", ((unsigned lo
 	if err != nil {
 		return err
 	}
-	cSyscalls["open_by_handle_at"] = *cSyscall
-	cSyscall, err = parseSyscall("flock", string(`name: sys_enter_flock
-ID: 905
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("flock")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_flock
+ID: 931
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -924,9 +972,10 @@ print fmt: "fd: 0x%08lx, cmd: 0x%08lx", ((unsigned long)(REC->fd)), ((unsigned l
 	if err != nil {
 		return err
 	}
-	cSyscalls["flock"] = *cSyscall
-	cSyscall, err = parseSyscall("io_uring_enter", string(`name: sys_enter_io_uring_enter
-ID: 889
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("io_uring_enter")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_io_uring_enter
+ID: 915
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -946,9 +995,10 @@ print fmt: "fd: 0x%08lx, to_submit: 0x%08lx, min_complete: 0x%08lx, flags: 0x%08
 	if err != nil {
 		return err
 	}
-	cSyscalls["io_uring_enter"] = *cSyscall
-	cSyscall, err = parseSyscall("io_uring_setup", string(`name: sys_enter_io_uring_setup
-ID: 887
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("io_uring_setup")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_io_uring_setup
+ID: 913
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -964,9 +1014,10 @@ print fmt: "entries: 0x%08lx, params: 0x%08lx", ((unsigned long)(REC->entries)),
 	if err != nil {
 		return err
 	}
-	cSyscalls["io_uring_setup"] = *cSyscall
-	cSyscall, err = parseSyscall("io_uring_register", string(`name: sys_enter_io_uring_register
-ID: 885
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("io_uring_register")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_io_uring_register
+ID: 911
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -984,9 +1035,10 @@ print fmt: "fd: 0x%08lx, opcode: 0x%08lx, arg: 0x%08lx, nr_args: 0x%08lx", ((uns
 	if err != nil {
 		return err
 	}
-	cSyscalls["io_uring_register"] = *cSyscall
-	cSyscall, err = parseSyscall("io_setup", string(`name: sys_enter_io_setup
-ID: 883
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("io_setup")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_io_setup
+ID: 909
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1002,9 +1054,10 @@ print fmt: "nr_events: 0x%08lx, ctxp: 0x%08lx", ((unsigned long)(REC->nr_events)
 	if err != nil {
 		return err
 	}
-	cSyscalls["io_setup"] = *cSyscall
-	cSyscall, err = parseSyscall("io_destroy", string(`name: sys_enter_io_destroy
-ID: 881
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("io_destroy")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_io_destroy
+ID: 907
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1019,9 +1072,10 @@ print fmt: "ctx: 0x%08lx", ((unsigned long)(REC->ctx))
 	if err != nil {
 		return err
 	}
-	cSyscalls["io_destroy"] = *cSyscall
-	cSyscall, err = parseSyscall("io_submit", string(`name: sys_enter_io_submit
-ID: 879
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("io_submit")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_io_submit
+ID: 905
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1038,9 +1092,10 @@ print fmt: "ctx_id: 0x%08lx, nr: 0x%08lx, iocbpp: 0x%08lx", ((unsigned long)(REC
 	if err != nil {
 		return err
 	}
-	cSyscalls["io_submit"] = *cSyscall
-	cSyscall, err = parseSyscall("io_cancel", string(`name: sys_enter_io_cancel
-ID: 877
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("io_cancel")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_io_cancel
+ID: 903
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1057,9 +1112,10 @@ print fmt: "ctx_id: 0x%08lx, iocb: 0x%08lx, result: 0x%08lx", ((unsigned long)(R
 	if err != nil {
 		return err
 	}
-	cSyscalls["io_cancel"] = *cSyscall
-	cSyscall, err = parseSyscall("io_getevents", string(`name: sys_enter_io_getevents
-ID: 875
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("io_getevents")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_io_getevents
+ID: 901
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1078,9 +1134,10 @@ print fmt: "ctx_id: 0x%08lx, min_nr: 0x%08lx, nr: 0x%08lx, events: 0x%08lx, time
 	if err != nil {
 		return err
 	}
-	cSyscalls["io_getevents"] = *cSyscall
-	cSyscall, err = parseSyscall("io_pgetevents", string(`name: sys_enter_io_pgetevents
-ID: 873
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("io_pgetevents")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_io_pgetevents
+ID: 899
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1100,9 +1157,10 @@ print fmt: "ctx_id: 0x%08lx, min_nr: 0x%08lx, nr: 0x%08lx, events: 0x%08lx, time
 	if err != nil {
 		return err
 	}
-	cSyscalls["io_pgetevents"] = *cSyscall
-	cSyscall, err = parseSyscall("userfaultfd", string(`name: sys_enter_userfaultfd
-ID: 871
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("userfaultfd")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_userfaultfd
+ID: 897
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1117,9 +1175,10 @@ print fmt: "flags: 0x%08lx", ((unsigned long)(REC->flags))
 	if err != nil {
 		return err
 	}
-	cSyscalls["userfaultfd"] = *cSyscall
-	cSyscall, err = parseSyscall("eventfd2", string(`name: sys_enter_eventfd2
-ID: 869
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("eventfd2")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_eventfd2
+ID: 895
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1135,9 +1194,10 @@ print fmt: "count: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC->count)), ((un
 	if err != nil {
 		return err
 	}
-	cSyscalls["eventfd2"] = *cSyscall
-	cSyscall, err = parseSyscall("eventfd", string(`name: sys_enter_eventfd
-ID: 867
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("eventfd")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_eventfd
+ID: 893
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1152,9 +1212,10 @@ print fmt: "count: 0x%08lx", ((unsigned long)(REC->count))
 	if err != nil {
 		return err
 	}
-	cSyscalls["eventfd"] = *cSyscall
-	cSyscall, err = parseSyscall("timerfd_create", string(`name: sys_enter_timerfd_create
-ID: 865
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("timerfd_create")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_timerfd_create
+ID: 891
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1170,9 +1231,10 @@ print fmt: "clockid: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC->clockid)), 
 	if err != nil {
 		return err
 	}
-	cSyscalls["timerfd_create"] = *cSyscall
-	cSyscall, err = parseSyscall("timerfd_settime", string(`name: sys_enter_timerfd_settime
-ID: 863
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("timerfd_settime")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_timerfd_settime
+ID: 889
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1190,9 +1252,10 @@ print fmt: "ufd: 0x%08lx, flags: 0x%08lx, utmr: 0x%08lx, otmr: 0x%08lx", ((unsig
 	if err != nil {
 		return err
 	}
-	cSyscalls["timerfd_settime"] = *cSyscall
-	cSyscall, err = parseSyscall("timerfd_gettime", string(`name: sys_enter_timerfd_gettime
-ID: 861
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("timerfd_gettime")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_timerfd_gettime
+ID: 887
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1208,9 +1271,10 @@ print fmt: "ufd: 0x%08lx, otmr: 0x%08lx", ((unsigned long)(REC->ufd)), ((unsigne
 	if err != nil {
 		return err
 	}
-	cSyscalls["timerfd_gettime"] = *cSyscall
-	cSyscall, err = parseSyscall("signalfd4", string(`name: sys_enter_signalfd4
-ID: 859
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("signalfd4")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_signalfd4
+ID: 885
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1228,9 +1292,10 @@ print fmt: "ufd: 0x%08lx, user_mask: 0x%08lx, sizemask: 0x%08lx, flags: 0x%08lx"
 	if err != nil {
 		return err
 	}
-	cSyscalls["signalfd4"] = *cSyscall
-	cSyscall, err = parseSyscall("signalfd", string(`name: sys_enter_signalfd
-ID: 857
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("signalfd")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_signalfd
+ID: 883
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1247,9 +1312,10 @@ print fmt: "ufd: 0x%08lx, user_mask: 0x%08lx, sizemask: 0x%08lx", ((unsigned lon
 	if err != nil {
 		return err
 	}
-	cSyscalls["signalfd"] = *cSyscall
-	cSyscall, err = parseSyscall("epoll_create1", string(`name: sys_enter_epoll_create1
-ID: 855
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("epoll_create1")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_epoll_create1
+ID: 881
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1264,9 +1330,10 @@ print fmt: "flags: 0x%08lx", ((unsigned long)(REC->flags))
 	if err != nil {
 		return err
 	}
-	cSyscalls["epoll_create1"] = *cSyscall
-	cSyscall, err = parseSyscall("epoll_create", string(`name: sys_enter_epoll_create
-ID: 853
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("epoll_create")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_epoll_create
+ID: 879
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1281,9 +1348,10 @@ print fmt: "size: 0x%08lx", ((unsigned long)(REC->size))
 	if err != nil {
 		return err
 	}
-	cSyscalls["epoll_create"] = *cSyscall
-	cSyscall, err = parseSyscall("epoll_ctl", string(`name: sys_enter_epoll_ctl
-ID: 851
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("epoll_ctl")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_epoll_ctl
+ID: 877
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1301,9 +1369,10 @@ print fmt: "epfd: 0x%08lx, op: 0x%08lx, fd: 0x%08lx, event: 0x%08lx", ((unsigned
 	if err != nil {
 		return err
 	}
-	cSyscalls["epoll_ctl"] = *cSyscall
-	cSyscall, err = parseSyscall("epoll_wait", string(`name: sys_enter_epoll_wait
-ID: 849
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("epoll_wait")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_epoll_wait
+ID: 875
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1321,9 +1390,10 @@ print fmt: "epfd: 0x%08lx, events: 0x%08lx, maxevents: 0x%08lx, timeout: 0x%08lx
 	if err != nil {
 		return err
 	}
-	cSyscalls["epoll_wait"] = *cSyscall
-	cSyscall, err = parseSyscall("epoll_pwait", string(`name: sys_enter_epoll_pwait
-ID: 847
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("epoll_pwait")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_epoll_pwait
+ID: 873
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1343,9 +1413,10 @@ print fmt: "epfd: 0x%08lx, events: 0x%08lx, maxevents: 0x%08lx, timeout: 0x%08lx
 	if err != nil {
 		return err
 	}
-	cSyscalls["epoll_pwait"] = *cSyscall
-	cSyscall, err = parseSyscall("fanotify_init", string(`name: sys_enter_fanotify_init
-ID: 845
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fanotify_init")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fanotify_init
+ID: 871
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1361,9 +1432,10 @@ print fmt: "flags: 0x%08lx, event_f_flags: 0x%08lx", ((unsigned long)(REC->flags
 	if err != nil {
 		return err
 	}
-	cSyscalls["fanotify_init"] = *cSyscall
-	cSyscall, err = parseSyscall("fanotify_mark", string(`name: sys_enter_fanotify_mark
-ID: 843
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fanotify_mark")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fanotify_mark
+ID: 869
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1382,9 +1454,10 @@ print fmt: "fanotify_fd: 0x%08lx, flags: 0x%08lx, mask: 0x%08lx, dfd: 0x%08lx, p
 	if err != nil {
 		return err
 	}
-	cSyscalls["fanotify_mark"] = *cSyscall
-	cSyscall, err = parseSyscall("inotify_init1", string(`name: sys_enter_inotify_init1
-ID: 841
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("inotify_init1")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_inotify_init1
+ID: 867
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1399,9 +1472,10 @@ print fmt: "flags: 0x%08lx", ((unsigned long)(REC->flags))
 	if err != nil {
 		return err
 	}
-	cSyscalls["inotify_init1"] = *cSyscall
-	cSyscall, err = parseSyscall("inotify_init", string(`name: sys_enter_inotify_init
-ID: 839
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("inotify_init")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_inotify_init
+ID: 865
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1415,9 +1489,10 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["inotify_init"] = *cSyscall
-	cSyscall, err = parseSyscall("inotify_add_watch", string(`name: sys_enter_inotify_add_watch
-ID: 837
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("inotify_add_watch")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_inotify_add_watch
+ID: 863
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1434,9 +1509,10 @@ print fmt: "fd: 0x%08lx, pathname: 0x%08lx, mask: 0x%08lx", ((unsigned long)(REC
 	if err != nil {
 		return err
 	}
-	cSyscalls["inotify_add_watch"] = *cSyscall
-	cSyscall, err = parseSyscall("inotify_rm_watch", string(`name: sys_enter_inotify_rm_watch
-ID: 835
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("inotify_rm_watch")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_inotify_rm_watch
+ID: 861
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1452,9 +1528,71 @@ print fmt: "fd: 0x%08lx, wd: 0x%08lx", ((unsigned long)(REC->fd)), ((unsigned lo
 	if err != nil {
 		return err
 	}
-	cSyscalls["inotify_rm_watch"] = *cSyscall
-	cSyscall, err = parseSyscall("statfs", string(`name: sys_enter_statfs
-ID: 833
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fsopen")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fsopen
+ID: 859
+format:
+	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
+	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
+	field:unsigned char common_preempt_count;	offset:3;	size:1;	signed:0;
+	field:int common_pid;	offset:4;	size:4;	signed:1;
+
+	field:int __syscall_nr;	offset:8;	size:4;	signed:1;
+	field:const char * _fs_name;	offset:16;	size:8;	signed:0;
+	field:unsigned int flags;	offset:24;	size:8;	signed:0;
+
+print fmt: "_fs_name: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC->_fs_name)), ((unsigned long)(REC->flags))
+`))
+	if err != nil {
+		return err
+	}
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fspick")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fspick
+ID: 857
+format:
+	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
+	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
+	field:unsigned char common_preempt_count;	offset:3;	size:1;	signed:0;
+	field:int common_pid;	offset:4;	size:4;	signed:1;
+
+	field:int __syscall_nr;	offset:8;	size:4;	signed:1;
+	field:int dfd;	offset:16;	size:8;	signed:0;
+	field:const char * path;	offset:24;	size:8;	signed:0;
+	field:unsigned int flags;	offset:32;	size:8;	signed:0;
+
+print fmt: "dfd: 0x%08lx, path: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC->dfd)), ((unsigned long)(REC->path)), ((unsigned long)(REC->flags))
+`))
+	if err != nil {
+		return err
+	}
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fsconfig")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fsconfig
+ID: 855
+format:
+	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
+	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
+	field:unsigned char common_preempt_count;	offset:3;	size:1;	signed:0;
+	field:int common_pid;	offset:4;	size:4;	signed:1;
+
+	field:int __syscall_nr;	offset:8;	size:4;	signed:1;
+	field:int fd;	offset:16;	size:8;	signed:0;
+	field:unsigned int cmd;	offset:24;	size:8;	signed:0;
+	field:const char * _key;	offset:32;	size:8;	signed:0;
+	field:const void * _value;	offset:40;	size:8;	signed:0;
+	field:int aux;	offset:48;	size:8;	signed:0;
+
+print fmt: "fd: 0x%08lx, cmd: 0x%08lx, _key: 0x%08lx, _value: 0x%08lx, aux: 0x%08lx", ((unsigned long)(REC->fd)), ((unsigned long)(REC->cmd)), ((unsigned long)(REC->_key)), ((unsigned long)(REC->_value)), ((unsigned long)(REC->aux))
+`))
+	if err != nil {
+		return err
+	}
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("statfs")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_statfs
+ID: 853
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1470,9 +1608,10 @@ print fmt: "pathname: 0x%08lx, buf: 0x%08lx", ((unsigned long)(REC->pathname)), 
 	if err != nil {
 		return err
 	}
-	cSyscalls["statfs"] = *cSyscall
-	cSyscall, err = parseSyscall("fstatfs", string(`name: sys_enter_fstatfs
-ID: 831
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fstatfs")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fstatfs
+ID: 851
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1488,9 +1627,10 @@ print fmt: "fd: 0x%08lx, buf: 0x%08lx", ((unsigned long)(REC->fd)), ((unsigned l
 	if err != nil {
 		return err
 	}
-	cSyscalls["fstatfs"] = *cSyscall
-	cSyscall, err = parseSyscall("ustat", string(`name: sys_enter_ustat
-ID: 829
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("ustat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_ustat
+ID: 849
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1506,9 +1646,10 @@ print fmt: "dev: 0x%08lx, ubuf: 0x%08lx", ((unsigned long)(REC->dev)), ((unsigne
 	if err != nil {
 		return err
 	}
-	cSyscalls["ustat"] = *cSyscall
-	cSyscall, err = parseSyscall("getcwd", string(`name: sys_enter_getcwd
-ID: 827
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getcwd")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getcwd
+ID: 847
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1524,9 +1665,10 @@ print fmt: "buf: 0x%08lx, size: 0x%08lx", ((unsigned long)(REC->buf)), ((unsigne
 	if err != nil {
 		return err
 	}
-	cSyscalls["getcwd"] = *cSyscall
-	cSyscall, err = parseSyscall("utimensat", string(`name: sys_enter_utimensat
-ID: 825
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("utimensat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_utimensat
+ID: 845
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1544,9 +1686,10 @@ print fmt: "dfd: 0x%08lx, filename: 0x%08lx, utimes: 0x%08lx, flags: 0x%08lx", (
 	if err != nil {
 		return err
 	}
-	cSyscalls["utimensat"] = *cSyscall
-	cSyscall, err = parseSyscall("futimesat", string(`name: sys_enter_futimesat
-ID: 823
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("futimesat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_futimesat
+ID: 843
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1563,9 +1706,10 @@ print fmt: "dfd: 0x%08lx, filename: 0x%08lx, utimes: 0x%08lx", ((unsigned long)(
 	if err != nil {
 		return err
 	}
-	cSyscalls["futimesat"] = *cSyscall
-	cSyscall, err = parseSyscall("utimes", string(`name: sys_enter_utimes
-ID: 821
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("utimes")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_utimes
+ID: 841
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1581,9 +1725,10 @@ print fmt: "filename: 0x%08lx, utimes: 0x%08lx", ((unsigned long)(REC->filename)
 	if err != nil {
 		return err
 	}
-	cSyscalls["utimes"] = *cSyscall
-	cSyscall, err = parseSyscall("utime", string(`name: sys_enter_utime
-ID: 819
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("utime")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_utime
+ID: 839
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1599,9 +1744,10 @@ print fmt: "filename: 0x%08lx, times: 0x%08lx", ((unsigned long)(REC->filename))
 	if err != nil {
 		return err
 	}
-	cSyscalls["utime"] = *cSyscall
-	cSyscall, err = parseSyscall("sync", string(`name: sys_enter_sync
-ID: 817
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sync")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sync
+ID: 837
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1615,9 +1761,10 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["sync"] = *cSyscall
-	cSyscall, err = parseSyscall("syncfs", string(`name: sys_enter_syncfs
-ID: 815
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("syncfs")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_syncfs
+ID: 835
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1632,9 +1779,10 @@ print fmt: "fd: 0x%08lx", ((unsigned long)(REC->fd))
 	if err != nil {
 		return err
 	}
-	cSyscalls["syncfs"] = *cSyscall
-	cSyscall, err = parseSyscall("fsync", string(`name: sys_enter_fsync
-ID: 813
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fsync")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fsync
+ID: 833
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1649,9 +1797,10 @@ print fmt: "fd: 0x%08lx", ((unsigned long)(REC->fd))
 	if err != nil {
 		return err
 	}
-	cSyscalls["fsync"] = *cSyscall
-	cSyscall, err = parseSyscall("fdatasync", string(`name: sys_enter_fdatasync
-ID: 811
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fdatasync")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fdatasync
+ID: 831
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1666,9 +1815,10 @@ print fmt: "fd: 0x%08lx", ((unsigned long)(REC->fd))
 	if err != nil {
 		return err
 	}
-	cSyscalls["fdatasync"] = *cSyscall
-	cSyscall, err = parseSyscall("sync_file_range", string(`name: sys_enter_sync_file_range
-ID: 809
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sync_file_range")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sync_file_range
+ID: 829
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1686,9 +1836,10 @@ print fmt: "fd: 0x%08lx, offset: 0x%08lx, nbytes: 0x%08lx, flags: 0x%08lx", ((un
 	if err != nil {
 		return err
 	}
-	cSyscalls["sync_file_range"] = *cSyscall
-	cSyscall, err = parseSyscall("vmsplice", string(`name: sys_enter_vmsplice
-ID: 807
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("vmsplice")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_vmsplice
+ID: 827
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1706,9 +1857,10 @@ print fmt: "fd: 0x%08lx, uiov: 0x%08lx, nr_segs: 0x%08lx, flags: 0x%08lx", ((uns
 	if err != nil {
 		return err
 	}
-	cSyscalls["vmsplice"] = *cSyscall
-	cSyscall, err = parseSyscall("splice", string(`name: sys_enter_splice
-ID: 805
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("splice")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_splice
+ID: 825
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1728,9 +1880,10 @@ print fmt: "fd_in: 0x%08lx, off_in: 0x%08lx, fd_out: 0x%08lx, off_out: 0x%08lx, 
 	if err != nil {
 		return err
 	}
-	cSyscalls["splice"] = *cSyscall
-	cSyscall, err = parseSyscall("tee", string(`name: sys_enter_tee
-ID: 803
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("tee")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_tee
+ID: 823
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1748,9 +1901,10 @@ print fmt: "fdin: 0x%08lx, fdout: 0x%08lx, len: 0x%08lx, flags: 0x%08lx", ((unsi
 	if err != nil {
 		return err
 	}
-	cSyscalls["tee"] = *cSyscall
-	cSyscall, err = parseSyscall("setxattr", string(`name: sys_enter_setxattr
-ID: 772
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("setxattr")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_setxattr
+ID: 791
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1769,9 +1923,10 @@ print fmt: "pathname: 0x%08lx, name: 0x%08lx, value: 0x%08lx, size: 0x%08lx, fla
 	if err != nil {
 		return err
 	}
-	cSyscalls["setxattr"] = *cSyscall
-	cSyscall, err = parseSyscall("lsetxattr", string(`name: sys_enter_lsetxattr
-ID: 770
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("lsetxattr")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_lsetxattr
+ID: 789
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1790,9 +1945,10 @@ print fmt: "pathname: 0x%08lx, name: 0x%08lx, value: 0x%08lx, size: 0x%08lx, fla
 	if err != nil {
 		return err
 	}
-	cSyscalls["lsetxattr"] = *cSyscall
-	cSyscall, err = parseSyscall("fsetxattr", string(`name: sys_enter_fsetxattr
-ID: 768
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fsetxattr")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fsetxattr
+ID: 787
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1811,9 +1967,10 @@ print fmt: "fd: 0x%08lx, name: 0x%08lx, value: 0x%08lx, size: 0x%08lx, flags: 0x
 	if err != nil {
 		return err
 	}
-	cSyscalls["fsetxattr"] = *cSyscall
-	cSyscall, err = parseSyscall("getxattr", string(`name: sys_enter_getxattr
-ID: 766
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getxattr")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getxattr
+ID: 785
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1831,9 +1988,10 @@ print fmt: "pathname: 0x%08lx, name: 0x%08lx, value: 0x%08lx, size: 0x%08lx", ((
 	if err != nil {
 		return err
 	}
-	cSyscalls["getxattr"] = *cSyscall
-	cSyscall, err = parseSyscall("lgetxattr", string(`name: sys_enter_lgetxattr
-ID: 764
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("lgetxattr")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_lgetxattr
+ID: 783
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1851,9 +2009,10 @@ print fmt: "pathname: 0x%08lx, name: 0x%08lx, value: 0x%08lx, size: 0x%08lx", ((
 	if err != nil {
 		return err
 	}
-	cSyscalls["lgetxattr"] = *cSyscall
-	cSyscall, err = parseSyscall("fgetxattr", string(`name: sys_enter_fgetxattr
-ID: 762
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fgetxattr")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fgetxattr
+ID: 781
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1871,9 +2030,10 @@ print fmt: "fd: 0x%08lx, name: 0x%08lx, value: 0x%08lx, size: 0x%08lx", ((unsign
 	if err != nil {
 		return err
 	}
-	cSyscalls["fgetxattr"] = *cSyscall
-	cSyscall, err = parseSyscall("listxattr", string(`name: sys_enter_listxattr
-ID: 760
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("listxattr")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_listxattr
+ID: 779
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1890,9 +2050,10 @@ print fmt: "pathname: 0x%08lx, list: 0x%08lx, size: 0x%08lx", ((unsigned long)(R
 	if err != nil {
 		return err
 	}
-	cSyscalls["listxattr"] = *cSyscall
-	cSyscall, err = parseSyscall("llistxattr", string(`name: sys_enter_llistxattr
-ID: 758
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("llistxattr")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_llistxattr
+ID: 777
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1909,9 +2070,10 @@ print fmt: "pathname: 0x%08lx, list: 0x%08lx, size: 0x%08lx", ((unsigned long)(R
 	if err != nil {
 		return err
 	}
-	cSyscalls["llistxattr"] = *cSyscall
-	cSyscall, err = parseSyscall("flistxattr", string(`name: sys_enter_flistxattr
-ID: 756
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("flistxattr")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_flistxattr
+ID: 775
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1928,9 +2090,10 @@ print fmt: "fd: 0x%08lx, list: 0x%08lx, size: 0x%08lx", ((unsigned long)(REC->fd
 	if err != nil {
 		return err
 	}
-	cSyscalls["flistxattr"] = *cSyscall
-	cSyscall, err = parseSyscall("removexattr", string(`name: sys_enter_removexattr
-ID: 754
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("removexattr")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_removexattr
+ID: 773
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1946,9 +2109,10 @@ print fmt: "pathname: 0x%08lx, name: 0x%08lx", ((unsigned long)(REC->pathname)),
 	if err != nil {
 		return err
 	}
-	cSyscalls["removexattr"] = *cSyscall
-	cSyscall, err = parseSyscall("lremovexattr", string(`name: sys_enter_lremovexattr
-ID: 752
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("lremovexattr")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_lremovexattr
+ID: 771
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1964,9 +2128,10 @@ print fmt: "pathname: 0x%08lx, name: 0x%08lx", ((unsigned long)(REC->pathname)),
 	if err != nil {
 		return err
 	}
-	cSyscalls["lremovexattr"] = *cSyscall
-	cSyscall, err = parseSyscall("fremovexattr", string(`name: sys_enter_fremovexattr
-ID: 750
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fremovexattr")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fremovexattr
+ID: 769
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -1982,9 +2147,10 @@ print fmt: "fd: 0x%08lx, name: 0x%08lx", ((unsigned long)(REC->fd)), ((unsigned 
 	if err != nil {
 		return err
 	}
-	cSyscalls["fremovexattr"] = *cSyscall
-	cSyscall, err = parseSyscall("umount", string(`name: sys_enter_umount
-ID: 748
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("umount")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_umount
+ID: 767
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2000,9 +2166,30 @@ print fmt: "name: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC->name)), ((unsi
 	if err != nil {
 		return err
 	}
-	cSyscalls["umount"] = *cSyscall
-	cSyscall, err = parseSyscall("mount", string(`name: sys_enter_mount
-ID: 746
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("open_tree")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_open_tree
+ID: 765
+format:
+	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
+	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
+	field:unsigned char common_preempt_count;	offset:3;	size:1;	signed:0;
+	field:int common_pid;	offset:4;	size:4;	signed:1;
+
+	field:int __syscall_nr;	offset:8;	size:4;	signed:1;
+	field:int dfd;	offset:16;	size:8;	signed:0;
+	field:const char * filename;	offset:24;	size:8;	signed:0;
+	field:unsigned flags;	offset:32;	size:8;	signed:0;
+
+print fmt: "dfd: 0x%08lx, filename: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC->dfd)), ((unsigned long)(REC->filename)), ((unsigned long)(REC->flags))
+`))
+	if err != nil {
+		return err
+	}
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mount")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mount
+ID: 763
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2021,9 +2208,52 @@ print fmt: "dev_name: 0x%08lx, dir_name: 0x%08lx, type: 0x%08lx, flags: 0x%08lx,
 	if err != nil {
 		return err
 	}
-	cSyscalls["mount"] = *cSyscall
-	cSyscall, err = parseSyscall("pivot_root", string(`name: sys_enter_pivot_root
-ID: 744
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fsmount")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fsmount
+ID: 761
+format:
+	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
+	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
+	field:unsigned char common_preempt_count;	offset:3;	size:1;	signed:0;
+	field:int common_pid;	offset:4;	size:4;	signed:1;
+
+	field:int __syscall_nr;	offset:8;	size:4;	signed:1;
+	field:int fs_fd;	offset:16;	size:8;	signed:0;
+	field:unsigned int flags;	offset:24;	size:8;	signed:0;
+	field:unsigned int attr_flags;	offset:32;	size:8;	signed:0;
+
+print fmt: "fs_fd: 0x%08lx, flags: 0x%08lx, attr_flags: 0x%08lx", ((unsigned long)(REC->fs_fd)), ((unsigned long)(REC->flags)), ((unsigned long)(REC->attr_flags))
+`))
+	if err != nil {
+		return err
+	}
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("move_mount")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_move_mount
+ID: 759
+format:
+	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
+	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
+	field:unsigned char common_preempt_count;	offset:3;	size:1;	signed:0;
+	field:int common_pid;	offset:4;	size:4;	signed:1;
+
+	field:int __syscall_nr;	offset:8;	size:4;	signed:1;
+	field:int from_dfd;	offset:16;	size:8;	signed:0;
+	field:const char * from_pathname;	offset:24;	size:8;	signed:0;
+	field:int to_dfd;	offset:32;	size:8;	signed:0;
+	field:const char * to_pathname;	offset:40;	size:8;	signed:0;
+	field:unsigned int flags;	offset:48;	size:8;	signed:0;
+
+print fmt: "from_dfd: 0x%08lx, from_pathname: 0x%08lx, to_dfd: 0x%08lx, to_pathname: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC->from_dfd)), ((unsigned long)(REC->from_pathname)), ((unsigned long)(REC->to_dfd)), ((unsigned long)(REC->to_pathname)), ((unsigned long)(REC->flags))
+`))
+	if err != nil {
+		return err
+	}
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("pivot_root")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_pivot_root
+ID: 757
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2039,9 +2269,10 @@ print fmt: "new_root: 0x%08lx, put_old: 0x%08lx", ((unsigned long)(REC->new_root
 	if err != nil {
 		return err
 	}
-	cSyscalls["pivot_root"] = *cSyscall
-	cSyscall, err = parseSyscall("sysfs", string(`name: sys_enter_sysfs
-ID: 742
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sysfs")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sysfs
+ID: 755
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2058,9 +2289,10 @@ print fmt: "option: 0x%08lx, arg1: 0x%08lx, arg2: 0x%08lx", ((unsigned long)(REC
 	if err != nil {
 		return err
 	}
-	cSyscalls["sysfs"] = *cSyscall
-	cSyscall, err = parseSyscall("dup3", string(`name: sys_enter_dup3
-ID: 740
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("dup3")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_dup3
+ID: 753
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2077,9 +2309,10 @@ print fmt: "oldfd: 0x%08lx, newfd: 0x%08lx, flags: 0x%08lx", ((unsigned long)(RE
 	if err != nil {
 		return err
 	}
-	cSyscalls["dup3"] = *cSyscall
-	cSyscall, err = parseSyscall("dup2", string(`name: sys_enter_dup2
-ID: 738
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("dup2")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_dup2
+ID: 751
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2095,9 +2328,10 @@ print fmt: "oldfd: 0x%08lx, newfd: 0x%08lx", ((unsigned long)(REC->oldfd)), ((un
 	if err != nil {
 		return err
 	}
-	cSyscalls["dup2"] = *cSyscall
-	cSyscall, err = parseSyscall("dup", string(`name: sys_enter_dup
-ID: 736
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("dup")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_dup
+ID: 749
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2112,9 +2346,10 @@ print fmt: "fildes: 0x%08lx", ((unsigned long)(REC->fildes))
 	if err != nil {
 		return err
 	}
-	cSyscalls["dup"] = *cSyscall
-	cSyscall, err = parseSyscall("select", string(`name: sys_enter_select
-ID: 734
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("select")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_select
+ID: 747
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2133,9 +2368,10 @@ print fmt: "n: 0x%08lx, inp: 0x%08lx, outp: 0x%08lx, exp: 0x%08lx, tvp: 0x%08lx"
 	if err != nil {
 		return err
 	}
-	cSyscalls["select"] = *cSyscall
-	cSyscall, err = parseSyscall("pselect6", string(`name: sys_enter_pselect6
-ID: 732
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("pselect6")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_pselect6
+ID: 745
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2155,9 +2391,10 @@ print fmt: "n: 0x%08lx, inp: 0x%08lx, outp: 0x%08lx, exp: 0x%08lx, tsp: 0x%08lx,
 	if err != nil {
 		return err
 	}
-	cSyscalls["pselect6"] = *cSyscall
-	cSyscall, err = parseSyscall("poll", string(`name: sys_enter_poll
-ID: 730
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("poll")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_poll
+ID: 743
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2174,9 +2411,10 @@ print fmt: "ufds: 0x%08lx, nfds: 0x%08lx, timeout_msecs: 0x%08lx", ((unsigned lo
 	if err != nil {
 		return err
 	}
-	cSyscalls["poll"] = *cSyscall
-	cSyscall, err = parseSyscall("ppoll", string(`name: sys_enter_ppoll
-ID: 728
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("ppoll")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_ppoll
+ID: 741
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2195,9 +2433,10 @@ print fmt: "ufds: 0x%08lx, nfds: 0x%08lx, tsp: 0x%08lx, sigmask: 0x%08lx, sigset
 	if err != nil {
 		return err
 	}
-	cSyscalls["ppoll"] = *cSyscall
-	cSyscall, err = parseSyscall("getdents", string(`name: sys_enter_getdents
-ID: 726
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getdents")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getdents
+ID: 739
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2214,9 +2453,10 @@ print fmt: "fd: 0x%08lx, dirent: 0x%08lx, count: 0x%08lx", ((unsigned long)(REC-
 	if err != nil {
 		return err
 	}
-	cSyscalls["getdents"] = *cSyscall
-	cSyscall, err = parseSyscall("getdents64", string(`name: sys_enter_getdents64
-ID: 724
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getdents64")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getdents64
+ID: 737
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2233,9 +2473,10 @@ print fmt: "fd: 0x%08lx, dirent: 0x%08lx, count: 0x%08lx", ((unsigned long)(REC-
 	if err != nil {
 		return err
 	}
-	cSyscalls["getdents64"] = *cSyscall
-	cSyscall, err = parseSyscall("ioctl", string(`name: sys_enter_ioctl
-ID: 722
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("ioctl")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_ioctl
+ID: 735
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2252,9 +2493,10 @@ print fmt: "fd: 0x%08lx, cmd: 0x%08lx, arg: 0x%08lx", ((unsigned long)(REC->fd))
 	if err != nil {
 		return err
 	}
-	cSyscalls["ioctl"] = *cSyscall
-	cSyscall, err = parseSyscall("fcntl", string(`name: sys_enter_fcntl
-ID: 720
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fcntl")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fcntl
+ID: 733
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2271,9 +2513,10 @@ print fmt: "fd: 0x%08lx, cmd: 0x%08lx, arg: 0x%08lx", ((unsigned long)(REC->fd))
 	if err != nil {
 		return err
 	}
-	cSyscalls["fcntl"] = *cSyscall
-	cSyscall, err = parseSyscall("mknodat", string(`name: sys_enter_mknodat
-ID: 718
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mknodat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mknodat
+ID: 731
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2291,9 +2534,10 @@ print fmt: "dfd: 0x%08lx, filename: 0x%08lx, mode: 0x%08lx, dev: 0x%08lx", ((uns
 	if err != nil {
 		return err
 	}
-	cSyscalls["mknodat"] = *cSyscall
-	cSyscall, err = parseSyscall("mknod", string(`name: sys_enter_mknod
-ID: 716
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mknod")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mknod
+ID: 729
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2310,9 +2554,10 @@ print fmt: "filename: 0x%08lx, mode: 0x%08lx, dev: 0x%08lx", ((unsigned long)(RE
 	if err != nil {
 		return err
 	}
-	cSyscalls["mknod"] = *cSyscall
-	cSyscall, err = parseSyscall("mkdirat", string(`name: sys_enter_mkdirat
-ID: 714
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mkdirat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mkdirat
+ID: 727
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2329,9 +2574,10 @@ print fmt: "dfd: 0x%08lx, pathname: 0x%08lx, mode: 0x%08lx", ((unsigned long)(RE
 	if err != nil {
 		return err
 	}
-	cSyscalls["mkdirat"] = *cSyscall
-	cSyscall, err = parseSyscall("mkdir", string(`name: sys_enter_mkdir
-ID: 712
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mkdir")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mkdir
+ID: 725
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2347,9 +2593,10 @@ print fmt: "pathname: 0x%08lx, mode: 0x%08lx", ((unsigned long)(REC->pathname)),
 	if err != nil {
 		return err
 	}
-	cSyscalls["mkdir"] = *cSyscall
-	cSyscall, err = parseSyscall("rmdir", string(`name: sys_enter_rmdir
-ID: 710
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("rmdir")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_rmdir
+ID: 723
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2364,9 +2611,10 @@ print fmt: "pathname: 0x%08lx", ((unsigned long)(REC->pathname))
 	if err != nil {
 		return err
 	}
-	cSyscalls["rmdir"] = *cSyscall
-	cSyscall, err = parseSyscall("unlinkat", string(`name: sys_enter_unlinkat
-ID: 708
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("unlinkat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_unlinkat
+ID: 721
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2383,9 +2631,10 @@ print fmt: "dfd: 0x%08lx, pathname: 0x%08lx, flag: 0x%08lx", ((unsigned long)(RE
 	if err != nil {
 		return err
 	}
-	cSyscalls["unlinkat"] = *cSyscall
-	cSyscall, err = parseSyscall("unlink", string(`name: sys_enter_unlink
-ID: 706
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("unlink")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_unlink
+ID: 719
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2400,9 +2649,10 @@ print fmt: "pathname: 0x%08lx", ((unsigned long)(REC->pathname))
 	if err != nil {
 		return err
 	}
-	cSyscalls["unlink"] = *cSyscall
-	cSyscall, err = parseSyscall("symlinkat", string(`name: sys_enter_symlinkat
-ID: 704
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("symlinkat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_symlinkat
+ID: 717
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2419,9 +2669,10 @@ print fmt: "oldname: 0x%08lx, newdfd: 0x%08lx, newname: 0x%08lx", ((unsigned lon
 	if err != nil {
 		return err
 	}
-	cSyscalls["symlinkat"] = *cSyscall
-	cSyscall, err = parseSyscall("symlink", string(`name: sys_enter_symlink
-ID: 702
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("symlink")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_symlink
+ID: 715
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2437,9 +2688,10 @@ print fmt: "oldname: 0x%08lx, newname: 0x%08lx", ((unsigned long)(REC->oldname))
 	if err != nil {
 		return err
 	}
-	cSyscalls["symlink"] = *cSyscall
-	cSyscall, err = parseSyscall("linkat", string(`name: sys_enter_linkat
-ID: 700
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("linkat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_linkat
+ID: 713
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2458,9 +2710,10 @@ print fmt: "olddfd: 0x%08lx, oldname: 0x%08lx, newdfd: 0x%08lx, newname: 0x%08lx
 	if err != nil {
 		return err
 	}
-	cSyscalls["linkat"] = *cSyscall
-	cSyscall, err = parseSyscall("link", string(`name: sys_enter_link
-ID: 698
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("link")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_link
+ID: 711
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2476,9 +2729,10 @@ print fmt: "oldname: 0x%08lx, newname: 0x%08lx", ((unsigned long)(REC->oldname))
 	if err != nil {
 		return err
 	}
-	cSyscalls["link"] = *cSyscall
-	cSyscall, err = parseSyscall("renameat2", string(`name: sys_enter_renameat2
-ID: 696
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("renameat2")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_renameat2
+ID: 709
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2497,9 +2751,10 @@ print fmt: "olddfd: 0x%08lx, oldname: 0x%08lx, newdfd: 0x%08lx, newname: 0x%08lx
 	if err != nil {
 		return err
 	}
-	cSyscalls["renameat2"] = *cSyscall
-	cSyscall, err = parseSyscall("renameat", string(`name: sys_enter_renameat
-ID: 694
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("renameat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_renameat
+ID: 707
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2517,9 +2772,10 @@ print fmt: "olddfd: 0x%08lx, oldname: 0x%08lx, newdfd: 0x%08lx, newname: 0x%08lx
 	if err != nil {
 		return err
 	}
-	cSyscalls["renameat"] = *cSyscall
-	cSyscall, err = parseSyscall("rename", string(`name: sys_enter_rename
-ID: 692
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("rename")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_rename
+ID: 705
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2535,9 +2791,10 @@ print fmt: "oldname: 0x%08lx, newname: 0x%08lx", ((unsigned long)(REC->oldname))
 	if err != nil {
 		return err
 	}
-	cSyscalls["rename"] = *cSyscall
-	cSyscall, err = parseSyscall("pipe2", string(`name: sys_enter_pipe2
-ID: 690
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("pipe2")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_pipe2
+ID: 703
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2553,9 +2810,10 @@ print fmt: "fildes: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC->fildes)), ((
 	if err != nil {
 		return err
 	}
-	cSyscalls["pipe2"] = *cSyscall
-	cSyscall, err = parseSyscall("pipe", string(`name: sys_enter_pipe
-ID: 688
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("pipe")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_pipe
+ID: 701
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2570,9 +2828,10 @@ print fmt: "fildes: 0x%08lx", ((unsigned long)(REC->fildes))
 	if err != nil {
 		return err
 	}
-	cSyscalls["pipe"] = *cSyscall
-	cSyscall, err = parseSyscall("execve", string(`name: sys_enter_execve
-ID: 686
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("execve")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_execve
+ID: 699
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2589,9 +2848,10 @@ print fmt: "filename: 0x%08lx, argv: 0x%08lx, envp: 0x%08lx", ((unsigned long)(R
 	if err != nil {
 		return err
 	}
-	cSyscalls["execve"] = *cSyscall
-	cSyscall, err = parseSyscall("execveat", string(`name: sys_enter_execveat
-ID: 684
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("execveat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_execveat
+ID: 697
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2610,9 +2870,10 @@ print fmt: "fd: 0x%08lx, filename: 0x%08lx, argv: 0x%08lx, envp: 0x%08lx, flags:
 	if err != nil {
 		return err
 	}
-	cSyscalls["execveat"] = *cSyscall
-	cSyscall, err = parseSyscall("newstat", string(`name: sys_enter_newstat
-ID: 682
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("newstat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_newstat
+ID: 695
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2628,9 +2889,10 @@ print fmt: "filename: 0x%08lx, statbuf: 0x%08lx", ((unsigned long)(REC->filename
 	if err != nil {
 		return err
 	}
-	cSyscalls["newstat"] = *cSyscall
-	cSyscall, err = parseSyscall("newlstat", string(`name: sys_enter_newlstat
-ID: 680
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("newlstat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_newlstat
+ID: 693
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2646,9 +2908,10 @@ print fmt: "filename: 0x%08lx, statbuf: 0x%08lx", ((unsigned long)(REC->filename
 	if err != nil {
 		return err
 	}
-	cSyscalls["newlstat"] = *cSyscall
-	cSyscall, err = parseSyscall("newfstatat", string(`name: sys_enter_newfstatat
-ID: 678
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("newfstatat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_newfstatat
+ID: 691
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2666,9 +2929,10 @@ print fmt: "dfd: 0x%08lx, filename: 0x%08lx, statbuf: 0x%08lx, flag: 0x%08lx", (
 	if err != nil {
 		return err
 	}
-	cSyscalls["newfstatat"] = *cSyscall
-	cSyscall, err = parseSyscall("newfstat", string(`name: sys_enter_newfstat
-ID: 676
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("newfstat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_newfstat
+ID: 689
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2684,9 +2948,10 @@ print fmt: "fd: 0x%08lx, statbuf: 0x%08lx", ((unsigned long)(REC->fd)), ((unsign
 	if err != nil {
 		return err
 	}
-	cSyscalls["newfstat"] = *cSyscall
-	cSyscall, err = parseSyscall("readlinkat", string(`name: sys_enter_readlinkat
-ID: 674
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("readlinkat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_readlinkat
+ID: 687
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2704,9 +2969,10 @@ print fmt: "dfd: 0x%08lx, pathname: 0x%08lx, buf: 0x%08lx, bufsiz: 0x%08lx", ((u
 	if err != nil {
 		return err
 	}
-	cSyscalls["readlinkat"] = *cSyscall
-	cSyscall, err = parseSyscall("readlink", string(`name: sys_enter_readlink
-ID: 672
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("readlink")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_readlink
+ID: 685
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2723,9 +2989,10 @@ print fmt: "path: 0x%08lx, buf: 0x%08lx, bufsiz: 0x%08lx", ((unsigned long)(REC-
 	if err != nil {
 		return err
 	}
-	cSyscalls["readlink"] = *cSyscall
-	cSyscall, err = parseSyscall("statx", string(`name: sys_enter_statx
-ID: 670
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("statx")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_statx
+ID: 683
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2744,9 +3011,10 @@ print fmt: "dfd: 0x%08lx, filename: 0x%08lx, flags: 0x%08lx, mask: 0x%08lx, buff
 	if err != nil {
 		return err
 	}
-	cSyscalls["statx"] = *cSyscall
-	cSyscall, err = parseSyscall("lseek", string(`name: sys_enter_lseek
-ID: 668
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("lseek")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_lseek
+ID: 681
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2763,9 +3031,10 @@ print fmt: "fd: 0x%08lx, offset: 0x%08lx, whence: 0x%08lx", ((unsigned long)(REC
 	if err != nil {
 		return err
 	}
-	cSyscalls["lseek"] = *cSyscall
-	cSyscall, err = parseSyscall("read", string(`name: sys_enter_read
-ID: 666
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("read")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_read
+ID: 679
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2782,9 +3051,10 @@ print fmt: "fd: 0x%08lx, buf: 0x%08lx, count: 0x%08lx", ((unsigned long)(REC->fd
 	if err != nil {
 		return err
 	}
-	cSyscalls["read"] = *cSyscall
-	cSyscall, err = parseSyscall("write", string(`name: sys_enter_write
-ID: 664
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("write")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_write
+ID: 677
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2801,9 +3071,10 @@ print fmt: "fd: 0x%08lx, buf: 0x%08lx, count: 0x%08lx", ((unsigned long)(REC->fd
 	if err != nil {
 		return err
 	}
-	cSyscalls["write"] = *cSyscall
-	cSyscall, err = parseSyscall("pread64", string(`name: sys_enter_pread64
-ID: 662
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("pread64")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_pread64
+ID: 675
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2821,9 +3092,10 @@ print fmt: "fd: 0x%08lx, buf: 0x%08lx, count: 0x%08lx, pos: 0x%08lx", ((unsigned
 	if err != nil {
 		return err
 	}
-	cSyscalls["pread64"] = *cSyscall
-	cSyscall, err = parseSyscall("pwrite64", string(`name: sys_enter_pwrite64
-ID: 660
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("pwrite64")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_pwrite64
+ID: 673
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2841,9 +3113,10 @@ print fmt: "fd: 0x%08lx, buf: 0x%08lx, count: 0x%08lx, pos: 0x%08lx", ((unsigned
 	if err != nil {
 		return err
 	}
-	cSyscalls["pwrite64"] = *cSyscall
-	cSyscall, err = parseSyscall("readv", string(`name: sys_enter_readv
-ID: 658
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("readv")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_readv
+ID: 671
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2860,9 +3133,10 @@ print fmt: "fd: 0x%08lx, vec: 0x%08lx, vlen: 0x%08lx", ((unsigned long)(REC->fd)
 	if err != nil {
 		return err
 	}
-	cSyscalls["readv"] = *cSyscall
-	cSyscall, err = parseSyscall("writev", string(`name: sys_enter_writev
-ID: 656
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("writev")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_writev
+ID: 669
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2879,9 +3153,10 @@ print fmt: "fd: 0x%08lx, vec: 0x%08lx, vlen: 0x%08lx", ((unsigned long)(REC->fd)
 	if err != nil {
 		return err
 	}
-	cSyscalls["writev"] = *cSyscall
-	cSyscall, err = parseSyscall("preadv", string(`name: sys_enter_preadv
-ID: 654
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("preadv")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_preadv
+ID: 667
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2900,9 +3175,10 @@ print fmt: "fd: 0x%08lx, vec: 0x%08lx, vlen: 0x%08lx, pos_l: 0x%08lx, pos_h: 0x%
 	if err != nil {
 		return err
 	}
-	cSyscalls["preadv"] = *cSyscall
-	cSyscall, err = parseSyscall("preadv2", string(`name: sys_enter_preadv2
-ID: 652
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("preadv2")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_preadv2
+ID: 665
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2922,9 +3198,10 @@ print fmt: "fd: 0x%08lx, vec: 0x%08lx, vlen: 0x%08lx, pos_l: 0x%08lx, pos_h: 0x%
 	if err != nil {
 		return err
 	}
-	cSyscalls["preadv2"] = *cSyscall
-	cSyscall, err = parseSyscall("pwritev", string(`name: sys_enter_pwritev
-ID: 650
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("pwritev")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_pwritev
+ID: 663
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2943,9 +3220,10 @@ print fmt: "fd: 0x%08lx, vec: 0x%08lx, vlen: 0x%08lx, pos_l: 0x%08lx, pos_h: 0x%
 	if err != nil {
 		return err
 	}
-	cSyscalls["pwritev"] = *cSyscall
-	cSyscall, err = parseSyscall("pwritev2", string(`name: sys_enter_pwritev2
-ID: 648
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("pwritev2")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_pwritev2
+ID: 661
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2965,9 +3243,10 @@ print fmt: "fd: 0x%08lx, vec: 0x%08lx, vlen: 0x%08lx, pos_l: 0x%08lx, pos_h: 0x%
 	if err != nil {
 		return err
 	}
-	cSyscalls["pwritev2"] = *cSyscall
-	cSyscall, err = parseSyscall("sendfile64", string(`name: sys_enter_sendfile64
-ID: 646
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sendfile64")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sendfile64
+ID: 659
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -2985,9 +3264,10 @@ print fmt: "out_fd: 0x%08lx, in_fd: 0x%08lx, offset: 0x%08lx, count: 0x%08lx", (
 	if err != nil {
 		return err
 	}
-	cSyscalls["sendfile64"] = *cSyscall
-	cSyscall, err = parseSyscall("copy_file_range", string(`name: sys_enter_copy_file_range
-ID: 644
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("copy_file_range")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_copy_file_range
+ID: 657
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3007,9 +3287,10 @@ print fmt: "fd_in: 0x%08lx, off_in: 0x%08lx, fd_out: 0x%08lx, off_out: 0x%08lx, 
 	if err != nil {
 		return err
 	}
-	cSyscalls["copy_file_range"] = *cSyscall
-	cSyscall, err = parseSyscall("truncate", string(`name: sys_enter_truncate
-ID: 642
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("truncate")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_truncate
+ID: 655
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3025,9 +3306,10 @@ print fmt: "path: 0x%08lx, length: 0x%08lx", ((unsigned long)(REC->path)), ((uns
 	if err != nil {
 		return err
 	}
-	cSyscalls["truncate"] = *cSyscall
-	cSyscall, err = parseSyscall("ftruncate", string(`name: sys_enter_ftruncate
-ID: 640
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("ftruncate")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_ftruncate
+ID: 653
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3043,9 +3325,10 @@ print fmt: "fd: 0x%08lx, length: 0x%08lx", ((unsigned long)(REC->fd)), ((unsigne
 	if err != nil {
 		return err
 	}
-	cSyscalls["ftruncate"] = *cSyscall
-	cSyscall, err = parseSyscall("fallocate", string(`name: sys_enter_fallocate
-ID: 638
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fallocate")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fallocate
+ID: 651
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3063,9 +3346,10 @@ print fmt: "fd: 0x%08lx, mode: 0x%08lx, offset: 0x%08lx, len: 0x%08lx", ((unsign
 	if err != nil {
 		return err
 	}
-	cSyscalls["fallocate"] = *cSyscall
-	cSyscall, err = parseSyscall("faccessat", string(`name: sys_enter_faccessat
-ID: 636
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("faccessat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_faccessat
+ID: 649
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3082,9 +3366,10 @@ print fmt: "dfd: 0x%08lx, filename: 0x%08lx, mode: 0x%08lx", ((unsigned long)(RE
 	if err != nil {
 		return err
 	}
-	cSyscalls["faccessat"] = *cSyscall
-	cSyscall, err = parseSyscall("access", string(`name: sys_enter_access
-ID: 634
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("access")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_access
+ID: 647
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3100,9 +3385,10 @@ print fmt: "filename: 0x%08lx, mode: 0x%08lx", ((unsigned long)(REC->filename)),
 	if err != nil {
 		return err
 	}
-	cSyscalls["access"] = *cSyscall
-	cSyscall, err = parseSyscall("chdir", string(`name: sys_enter_chdir
-ID: 632
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("chdir")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_chdir
+ID: 645
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3117,9 +3403,10 @@ print fmt: "filename: 0x%08lx", ((unsigned long)(REC->filename))
 	if err != nil {
 		return err
 	}
-	cSyscalls["chdir"] = *cSyscall
-	cSyscall, err = parseSyscall("fchdir", string(`name: sys_enter_fchdir
-ID: 630
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fchdir")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fchdir
+ID: 643
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3134,9 +3421,10 @@ print fmt: "fd: 0x%08lx", ((unsigned long)(REC->fd))
 	if err != nil {
 		return err
 	}
-	cSyscalls["fchdir"] = *cSyscall
-	cSyscall, err = parseSyscall("chroot", string(`name: sys_enter_chroot
-ID: 628
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("chroot")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_chroot
+ID: 641
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3151,9 +3439,10 @@ print fmt: "filename: 0x%08lx", ((unsigned long)(REC->filename))
 	if err != nil {
 		return err
 	}
-	cSyscalls["chroot"] = *cSyscall
-	cSyscall, err = parseSyscall("fchmod", string(`name: sys_enter_fchmod
-ID: 626
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fchmod")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fchmod
+ID: 639
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3169,9 +3458,10 @@ print fmt: "fd: 0x%08lx, mode: 0x%08lx", ((unsigned long)(REC->fd)), ((unsigned 
 	if err != nil {
 		return err
 	}
-	cSyscalls["fchmod"] = *cSyscall
-	cSyscall, err = parseSyscall("fchmodat", string(`name: sys_enter_fchmodat
-ID: 624
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fchmodat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fchmodat
+ID: 637
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3188,9 +3478,10 @@ print fmt: "dfd: 0x%08lx, filename: 0x%08lx, mode: 0x%08lx", ((unsigned long)(RE
 	if err != nil {
 		return err
 	}
-	cSyscalls["fchmodat"] = *cSyscall
-	cSyscall, err = parseSyscall("chmod", string(`name: sys_enter_chmod
-ID: 622
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("chmod")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_chmod
+ID: 635
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3206,9 +3497,10 @@ print fmt: "filename: 0x%08lx, mode: 0x%08lx", ((unsigned long)(REC->filename)),
 	if err != nil {
 		return err
 	}
-	cSyscalls["chmod"] = *cSyscall
-	cSyscall, err = parseSyscall("fchownat", string(`name: sys_enter_fchownat
-ID: 620
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fchownat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fchownat
+ID: 633
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3227,9 +3519,10 @@ print fmt: "dfd: 0x%08lx, filename: 0x%08lx, user: 0x%08lx, group: 0x%08lx, flag
 	if err != nil {
 		return err
 	}
-	cSyscalls["fchownat"] = *cSyscall
-	cSyscall, err = parseSyscall("chown", string(`name: sys_enter_chown
-ID: 618
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("chown")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_chown
+ID: 631
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3246,9 +3539,10 @@ print fmt: "filename: 0x%08lx, user: 0x%08lx, group: 0x%08lx", ((unsigned long)(
 	if err != nil {
 		return err
 	}
-	cSyscalls["chown"] = *cSyscall
-	cSyscall, err = parseSyscall("lchown", string(`name: sys_enter_lchown
-ID: 616
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("lchown")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_lchown
+ID: 629
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3265,9 +3559,10 @@ print fmt: "filename: 0x%08lx, user: 0x%08lx, group: 0x%08lx", ((unsigned long)(
 	if err != nil {
 		return err
 	}
-	cSyscalls["lchown"] = *cSyscall
-	cSyscall, err = parseSyscall("fchown", string(`name: sys_enter_fchown
-ID: 614
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fchown")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fchown
+ID: 627
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3284,9 +3579,10 @@ print fmt: "fd: 0x%08lx, user: 0x%08lx, group: 0x%08lx", ((unsigned long)(REC->f
 	if err != nil {
 		return err
 	}
-	cSyscalls["fchown"] = *cSyscall
-	cSyscall, err = parseSyscall("open", string(`name: sys_enter_open
-ID: 612
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("open")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_open
+ID: 625
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3303,9 +3599,10 @@ print fmt: "filename: 0x%08lx, flags: 0x%08lx, mode: 0x%08lx", ((unsigned long)(
 	if err != nil {
 		return err
 	}
-	cSyscalls["open"] = *cSyscall
-	cSyscall, err = parseSyscall("openat", string(`name: sys_enter_openat
-ID: 610
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("openat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_openat
+ID: 623
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3323,9 +3620,10 @@ print fmt: "dfd: 0x%08lx, filename: 0x%08lx, flags: 0x%08lx, mode: 0x%08lx", ((u
 	if err != nil {
 		return err
 	}
-	cSyscalls["openat"] = *cSyscall
-	cSyscall, err = parseSyscall("creat", string(`name: sys_enter_creat
-ID: 608
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("creat")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_creat
+ID: 621
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3341,9 +3639,10 @@ print fmt: "pathname: 0x%08lx, mode: 0x%08lx", ((unsigned long)(REC->pathname)),
 	if err != nil {
 		return err
 	}
-	cSyscalls["creat"] = *cSyscall
-	cSyscall, err = parseSyscall("close", string(`name: sys_enter_close
-ID: 606
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("close")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_close
+ID: 619
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3358,9 +3657,10 @@ print fmt: "fd: 0x%08lx", ((unsigned long)(REC->fd))
 	if err != nil {
 		return err
 	}
-	cSyscalls["close"] = *cSyscall
-	cSyscall, err = parseSyscall("vhangup", string(`name: sys_enter_vhangup
-ID: 604
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("vhangup")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_vhangup
+ID: 617
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3374,9 +3674,10 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["vhangup"] = *cSyscall
-	cSyscall, err = parseSyscall("memfd_create", string(`name: sys_enter_memfd_create
-ID: 602
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("memfd_create")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_memfd_create
+ID: 615
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3392,9 +3693,10 @@ print fmt: "uname: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC->uname)), ((un
 	if err != nil {
 		return err
 	}
-	cSyscalls["memfd_create"] = *cSyscall
-	cSyscall, err = parseSyscall("move_pages", string(`name: sys_enter_move_pages
-ID: 592
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("move_pages")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_move_pages
+ID: 605
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3414,9 +3716,10 @@ print fmt: "pid: 0x%08lx, nr_pages: 0x%08lx, pages: 0x%08lx, nodes: 0x%08lx, sta
 	if err != nil {
 		return err
 	}
-	cSyscalls["move_pages"] = *cSyscall
-	cSyscall, err = parseSyscall("mbind", string(`name: sys_enter_mbind
-ID: 590
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mbind")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mbind
+ID: 603
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3436,9 +3739,10 @@ print fmt: "start: 0x%08lx, len: 0x%08lx, mode: 0x%08lx, nmask: 0x%08lx, maxnode
 	if err != nil {
 		return err
 	}
-	cSyscalls["mbind"] = *cSyscall
-	cSyscall, err = parseSyscall("set_mempolicy", string(`name: sys_enter_set_mempolicy
-ID: 588
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("set_mempolicy")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_set_mempolicy
+ID: 601
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3455,9 +3759,10 @@ print fmt: "mode: 0x%08lx, nmask: 0x%08lx, maxnode: 0x%08lx", ((unsigned long)(R
 	if err != nil {
 		return err
 	}
-	cSyscalls["set_mempolicy"] = *cSyscall
-	cSyscall, err = parseSyscall("migrate_pages", string(`name: sys_enter_migrate_pages
-ID: 586
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("migrate_pages")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_migrate_pages
+ID: 599
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3475,9 +3780,10 @@ print fmt: "pid: 0x%08lx, maxnode: 0x%08lx, old_nodes: 0x%08lx, new_nodes: 0x%08
 	if err != nil {
 		return err
 	}
-	cSyscalls["migrate_pages"] = *cSyscall
-	cSyscall, err = parseSyscall("get_mempolicy", string(`name: sys_enter_get_mempolicy
-ID: 584
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("get_mempolicy")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_get_mempolicy
+ID: 597
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3496,9 +3802,10 @@ print fmt: "policy: 0x%08lx, nmask: 0x%08lx, maxnode: 0x%08lx, addr: 0x%08lx, fl
 	if err != nil {
 		return err
 	}
-	cSyscalls["get_mempolicy"] = *cSyscall
-	cSyscall, err = parseSyscall("swapoff", string(`name: sys_enter_swapoff
-ID: 582
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("swapoff")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_swapoff
+ID: 595
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3513,9 +3820,10 @@ print fmt: "specialfile: 0x%08lx", ((unsigned long)(REC->specialfile))
 	if err != nil {
 		return err
 	}
-	cSyscalls["swapoff"] = *cSyscall
-	cSyscall, err = parseSyscall("swapon", string(`name: sys_enter_swapon
-ID: 580
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("swapon")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_swapon
+ID: 593
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3531,9 +3839,10 @@ print fmt: "specialfile: 0x%08lx, swap_flags: 0x%08lx", ((unsigned long)(REC->sp
 	if err != nil {
 		return err
 	}
-	cSyscalls["swapon"] = *cSyscall
-	cSyscall, err = parseSyscall("madvise", string(`name: sys_enter_madvise
-ID: 578
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("madvise")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_madvise
+ID: 591
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3550,9 +3859,10 @@ print fmt: "start: 0x%08lx, len_in: 0x%08lx, behavior: 0x%08lx", ((unsigned long
 	if err != nil {
 		return err
 	}
-	cSyscalls["madvise"] = *cSyscall
-	cSyscall, err = parseSyscall("process_vm_readv", string(`name: sys_enter_process_vm_readv
-ID: 576
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("process_vm_readv")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_process_vm_readv
+ID: 589
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3572,9 +3882,10 @@ print fmt: "pid: 0x%08lx, lvec: 0x%08lx, liovcnt: 0x%08lx, rvec: 0x%08lx, riovcn
 	if err != nil {
 		return err
 	}
-	cSyscalls["process_vm_readv"] = *cSyscall
-	cSyscall, err = parseSyscall("process_vm_writev", string(`name: sys_enter_process_vm_writev
-ID: 574
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("process_vm_writev")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_process_vm_writev
+ID: 587
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3594,9 +3905,10 @@ print fmt: "pid: 0x%08lx, lvec: 0x%08lx, liovcnt: 0x%08lx, rvec: 0x%08lx, riovcn
 	if err != nil {
 		return err
 	}
-	cSyscalls["process_vm_writev"] = *cSyscall
-	cSyscall, err = parseSyscall("msync", string(`name: sys_enter_msync
-ID: 572
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("msync")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_msync
+ID: 585
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3613,9 +3925,10 @@ print fmt: "start: 0x%08lx, len: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC-
 	if err != nil {
 		return err
 	}
-	cSyscalls["msync"] = *cSyscall
-	cSyscall, err = parseSyscall("mremap", string(`name: sys_enter_mremap
-ID: 570
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mremap")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mremap
+ID: 583
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3634,9 +3947,10 @@ print fmt: "addr: 0x%08lx, old_len: 0x%08lx, new_len: 0x%08lx, flags: 0x%08lx, n
 	if err != nil {
 		return err
 	}
-	cSyscalls["mremap"] = *cSyscall
-	cSyscall, err = parseSyscall("mprotect", string(`name: sys_enter_mprotect
-ID: 568
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mprotect")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mprotect
+ID: 581
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3653,9 +3967,10 @@ print fmt: "start: 0x%08lx, len: 0x%08lx, prot: 0x%08lx", ((unsigned long)(REC->
 	if err != nil {
 		return err
 	}
-	cSyscalls["mprotect"] = *cSyscall
-	cSyscall, err = parseSyscall("pkey_mprotect", string(`name: sys_enter_pkey_mprotect
-ID: 566
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("pkey_mprotect")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_pkey_mprotect
+ID: 579
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3673,9 +3988,10 @@ print fmt: "start: 0x%08lx, len: 0x%08lx, prot: 0x%08lx, pkey: 0x%08lx", ((unsig
 	if err != nil {
 		return err
 	}
-	cSyscalls["pkey_mprotect"] = *cSyscall
-	cSyscall, err = parseSyscall("pkey_alloc", string(`name: sys_enter_pkey_alloc
-ID: 564
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("pkey_alloc")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_pkey_alloc
+ID: 577
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3691,9 +4007,10 @@ print fmt: "flags: 0x%08lx, init_val: 0x%08lx", ((unsigned long)(REC->flags)), (
 	if err != nil {
 		return err
 	}
-	cSyscalls["pkey_alloc"] = *cSyscall
-	cSyscall, err = parseSyscall("pkey_free", string(`name: sys_enter_pkey_free
-ID: 562
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("pkey_free")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_pkey_free
+ID: 575
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3708,9 +4025,10 @@ print fmt: "pkey: 0x%08lx", ((unsigned long)(REC->pkey))
 	if err != nil {
 		return err
 	}
-	cSyscalls["pkey_free"] = *cSyscall
-	cSyscall, err = parseSyscall("brk", string(`name: sys_enter_brk
-ID: 560
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("brk")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_brk
+ID: 573
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3725,9 +4043,10 @@ print fmt: "brk: 0x%08lx", ((unsigned long)(REC->brk))
 	if err != nil {
 		return err
 	}
-	cSyscalls["brk"] = *cSyscall
-	cSyscall, err = parseSyscall("munmap", string(`name: sys_enter_munmap
-ID: 558
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("munmap")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_munmap
+ID: 571
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3743,9 +4062,10 @@ print fmt: "addr: 0x%08lx, len: 0x%08lx", ((unsigned long)(REC->addr)), ((unsign
 	if err != nil {
 		return err
 	}
-	cSyscalls["munmap"] = *cSyscall
-	cSyscall, err = parseSyscall("remap_file_pages", string(`name: sys_enter_remap_file_pages
-ID: 556
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("remap_file_pages")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_remap_file_pages
+ID: 569
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3764,9 +4084,10 @@ print fmt: "start: 0x%08lx, size: 0x%08lx, prot: 0x%08lx, pgoff: 0x%08lx, flags:
 	if err != nil {
 		return err
 	}
-	cSyscalls["remap_file_pages"] = *cSyscall
-	cSyscall, err = parseSyscall("mlock", string(`name: sys_enter_mlock
-ID: 554
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mlock")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mlock
+ID: 567
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3782,9 +4103,10 @@ print fmt: "start: 0x%08lx, len: 0x%08lx", ((unsigned long)(REC->start)), ((unsi
 	if err != nil {
 		return err
 	}
-	cSyscalls["mlock"] = *cSyscall
-	cSyscall, err = parseSyscall("mlock2", string(`name: sys_enter_mlock2
-ID: 552
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mlock2")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mlock2
+ID: 565
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3801,9 +4123,10 @@ print fmt: "start: 0x%08lx, len: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC-
 	if err != nil {
 		return err
 	}
-	cSyscalls["mlock2"] = *cSyscall
-	cSyscall, err = parseSyscall("munlock", string(`name: sys_enter_munlock
-ID: 550
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("munlock")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_munlock
+ID: 563
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3819,9 +4142,10 @@ print fmt: "start: 0x%08lx, len: 0x%08lx", ((unsigned long)(REC->start)), ((unsi
 	if err != nil {
 		return err
 	}
-	cSyscalls["munlock"] = *cSyscall
-	cSyscall, err = parseSyscall("mlockall", string(`name: sys_enter_mlockall
-ID: 548
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mlockall")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mlockall
+ID: 561
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3836,9 +4160,10 @@ print fmt: "flags: 0x%08lx", ((unsigned long)(REC->flags))
 	if err != nil {
 		return err
 	}
-	cSyscalls["mlockall"] = *cSyscall
-	cSyscall, err = parseSyscall("munlockall", string(`name: sys_enter_munlockall
-ID: 546
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("munlockall")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_munlockall
+ID: 559
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3852,9 +4177,10 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["munlockall"] = *cSyscall
-	cSyscall, err = parseSyscall("mincore", string(`name: sys_enter_mincore
-ID: 544
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mincore")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mincore
+ID: 557
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3871,9 +4197,10 @@ print fmt: "start: 0x%08lx, len: 0x%08lx, vec: 0x%08lx", ((unsigned long)(REC->s
 	if err != nil {
 		return err
 	}
-	cSyscalls["mincore"] = *cSyscall
-	cSyscall, err = parseSyscall("readahead", string(`name: sys_enter_readahead
-ID: 493
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("readahead")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_readahead
+ID: 504
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3890,9 +4217,10 @@ print fmt: "fd: 0x%08lx, offset: 0x%08lx, count: 0x%08lx", ((unsigned long)(REC-
 	if err != nil {
 		return err
 	}
-	cSyscalls["readahead"] = *cSyscall
-	cSyscall, err = parseSyscall("fadvise64", string(`name: sys_enter_fadvise64
-ID: 491
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fadvise64")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fadvise64
+ID: 502
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3910,9 +4238,10 @@ print fmt: "fd: 0x%08lx, offset: 0x%08lx, len: 0x%08lx, advice: 0x%08lx", ((unsi
 	if err != nil {
 		return err
 	}
-	cSyscalls["fadvise64"] = *cSyscall
-	cSyscall, err = parseSyscall("rseq", string(`name: sys_enter_rseq
-ID: 475
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("rseq")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_rseq
+ID: 486
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3930,9 +4259,10 @@ print fmt: "rseq: 0x%08lx, rseq_len: 0x%08lx, flags: 0x%08lx, sig: 0x%08lx", ((u
 	if err != nil {
 		return err
 	}
-	cSyscalls["rseq"] = *cSyscall
-	cSyscall, err = parseSyscall("perf_event_open", string(`name: sys_enter_perf_event_open
-ID: 471
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("perf_event_open")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_perf_event_open
+ID: 482
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3951,9 +4281,10 @@ print fmt: "attr_uptr: 0x%08lx, pid: 0x%08lx, cpu: 0x%08lx, group_fd: 0x%08lx, f
 	if err != nil {
 		return err
 	}
-	cSyscalls["perf_event_open"] = *cSyscall
-	cSyscall, err = parseSyscall("bpf", string(`name: sys_enter_bpf
-ID: 469
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("bpf")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_bpf
+ID: 480
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3970,9 +4301,10 @@ print fmt: "cmd: 0x%08lx, uattr: 0x%08lx, size: 0x%08lx", ((unsigned long)(REC->
 	if err != nil {
 		return err
 	}
-	cSyscalls["bpf"] = *cSyscall
-	cSyscall, err = parseSyscall("seccomp", string(`name: sys_enter_seccomp
-ID: 432
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("seccomp")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_seccomp
+ID: 439
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -3989,9 +4321,10 @@ print fmt: "op: 0x%08lx, flags: 0x%08lx, uargs: 0x%08lx", ((unsigned long)(REC->
 	if err != nil {
 		return err
 	}
-	cSyscalls["seccomp"] = *cSyscall
-	cSyscall, err = parseSyscall("kexec_file_load", string(`name: sys_enter_kexec_file_load
-ID: 421
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("kexec_file_load")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_kexec_file_load
+ID: 424
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4010,9 +4343,10 @@ print fmt: "kernel_fd: 0x%08lx, initrd_fd: 0x%08lx, cmdline_len: 0x%08lx, cmdlin
 	if err != nil {
 		return err
 	}
-	cSyscalls["kexec_file_load"] = *cSyscall
-	cSyscall, err = parseSyscall("kexec_load", string(`name: sys_enter_kexec_load
-ID: 419
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("kexec_load")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_kexec_load
+ID: 422
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4030,9 +4364,10 @@ print fmt: "entry: 0x%08lx, nr_segments: 0x%08lx, segments: 0x%08lx, flags: 0x%0
 	if err != nil {
 		return err
 	}
-	cSyscalls["kexec_load"] = *cSyscall
-	cSyscall, err = parseSyscall("acct", string(`name: sys_enter_acct
-ID: 417
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("acct")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_acct
+ID: 420
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4047,9 +4382,10 @@ print fmt: "name: 0x%08lx", ((unsigned long)(REC->name))
 	if err != nil {
 		return err
 	}
-	cSyscalls["acct"] = *cSyscall
-	cSyscall, err = parseSyscall("delete_module", string(`name: sys_enter_delete_module
-ID: 410
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("delete_module")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_delete_module
+ID: 413
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4065,9 +4401,10 @@ print fmt: "name_user: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC->name_user
 	if err != nil {
 		return err
 	}
-	cSyscalls["delete_module"] = *cSyscall
-	cSyscall, err = parseSyscall("init_module", string(`name: sys_enter_init_module
-ID: 408
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("init_module")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_init_module
+ID: 411
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4084,9 +4421,10 @@ print fmt: "umod: 0x%08lx, len: 0x%08lx, uargs: 0x%08lx", ((unsigned long)(REC->
 	if err != nil {
 		return err
 	}
-	cSyscalls["init_module"] = *cSyscall
-	cSyscall, err = parseSyscall("finit_module", string(`name: sys_enter_finit_module
-ID: 406
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("finit_module")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_finit_module
+ID: 409
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4103,9 +4441,10 @@ print fmt: "fd: 0x%08lx, uargs: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC->
 	if err != nil {
 		return err
 	}
-	cSyscalls["finit_module"] = *cSyscall
-	cSyscall, err = parseSyscall("set_robust_list", string(`name: sys_enter_set_robust_list
-ID: 404
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("set_robust_list")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_set_robust_list
+ID: 407
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4121,9 +4460,10 @@ print fmt: "head: 0x%08lx, len: 0x%08lx", ((unsigned long)(REC->head)), ((unsign
 	if err != nil {
 		return err
 	}
-	cSyscalls["set_robust_list"] = *cSyscall
-	cSyscall, err = parseSyscall("get_robust_list", string(`name: sys_enter_get_robust_list
-ID: 402
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("get_robust_list")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_get_robust_list
+ID: 405
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4140,9 +4480,10 @@ print fmt: "pid: 0x%08lx, head_ptr: 0x%08lx, len_ptr: 0x%08lx", ((unsigned long)
 	if err != nil {
 		return err
 	}
-	cSyscalls["get_robust_list"] = *cSyscall
-	cSyscall, err = parseSyscall("futex", string(`name: sys_enter_futex
-ID: 400
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("futex")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_futex
+ID: 403
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4162,9 +4503,10 @@ print fmt: "uaddr: 0x%08lx, op: 0x%08lx, val: 0x%08lx, utime: 0x%08lx, uaddr2: 0
 	if err != nil {
 		return err
 	}
-	cSyscalls["futex"] = *cSyscall
-	cSyscall, err = parseSyscall("getitimer", string(`name: sys_enter_getitimer
-ID: 398
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getitimer")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getitimer
+ID: 401
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4180,9 +4522,10 @@ print fmt: "which: 0x%08lx, value: 0x%08lx", ((unsigned long)(REC->which)), ((un
 	if err != nil {
 		return err
 	}
-	cSyscalls["getitimer"] = *cSyscall
-	cSyscall, err = parseSyscall("alarm", string(`name: sys_enter_alarm
-ID: 396
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("alarm")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_alarm
+ID: 399
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4197,9 +4540,10 @@ print fmt: "seconds: 0x%08lx", ((unsigned long)(REC->seconds))
 	if err != nil {
 		return err
 	}
-	cSyscalls["alarm"] = *cSyscall
-	cSyscall, err = parseSyscall("setitimer", string(`name: sys_enter_setitimer
-ID: 394
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("setitimer")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_setitimer
+ID: 397
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4216,9 +4560,10 @@ print fmt: "which: 0x%08lx, value: 0x%08lx, ovalue: 0x%08lx", ((unsigned long)(R
 	if err != nil {
 		return err
 	}
-	cSyscalls["setitimer"] = *cSyscall
-	cSyscall, err = parseSyscall("timer_create", string(`name: sys_enter_timer_create
-ID: 392
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("timer_create")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_timer_create
+ID: 395
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4235,9 +4580,10 @@ print fmt: "which_clock: 0x%08lx, timer_event_spec: 0x%08lx, created_timer_id: 0
 	if err != nil {
 		return err
 	}
-	cSyscalls["timer_create"] = *cSyscall
-	cSyscall, err = parseSyscall("timer_gettime", string(`name: sys_enter_timer_gettime
-ID: 390
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("timer_gettime")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_timer_gettime
+ID: 393
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4253,9 +4599,10 @@ print fmt: "timer_id: 0x%08lx, setting: 0x%08lx", ((unsigned long)(REC->timer_id
 	if err != nil {
 		return err
 	}
-	cSyscalls["timer_gettime"] = *cSyscall
-	cSyscall, err = parseSyscall("timer_getoverrun", string(`name: sys_enter_timer_getoverrun
-ID: 388
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("timer_getoverrun")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_timer_getoverrun
+ID: 391
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4270,9 +4617,10 @@ print fmt: "timer_id: 0x%08lx", ((unsigned long)(REC->timer_id))
 	if err != nil {
 		return err
 	}
-	cSyscalls["timer_getoverrun"] = *cSyscall
-	cSyscall, err = parseSyscall("timer_settime", string(`name: sys_enter_timer_settime
-ID: 386
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("timer_settime")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_timer_settime
+ID: 389
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4290,9 +4638,10 @@ print fmt: "timer_id: 0x%08lx, flags: 0x%08lx, new_setting: 0x%08lx, old_setting
 	if err != nil {
 		return err
 	}
-	cSyscalls["timer_settime"] = *cSyscall
-	cSyscall, err = parseSyscall("timer_delete", string(`name: sys_enter_timer_delete
-ID: 384
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("timer_delete")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_timer_delete
+ID: 387
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4307,9 +4656,10 @@ print fmt: "timer_id: 0x%08lx", ((unsigned long)(REC->timer_id))
 	if err != nil {
 		return err
 	}
-	cSyscalls["timer_delete"] = *cSyscall
-	cSyscall, err = parseSyscall("clock_settime", string(`name: sys_enter_clock_settime
-ID: 382
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("clock_settime")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_clock_settime
+ID: 385
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4325,9 +4675,10 @@ print fmt: "which_clock: 0x%08lx, tp: 0x%08lx", ((unsigned long)(REC->which_cloc
 	if err != nil {
 		return err
 	}
-	cSyscalls["clock_settime"] = *cSyscall
-	cSyscall, err = parseSyscall("clock_gettime", string(`name: sys_enter_clock_gettime
-ID: 380
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("clock_gettime")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_clock_gettime
+ID: 383
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4343,9 +4694,10 @@ print fmt: "which_clock: 0x%08lx, tp: 0x%08lx", ((unsigned long)(REC->which_cloc
 	if err != nil {
 		return err
 	}
-	cSyscalls["clock_gettime"] = *cSyscall
-	cSyscall, err = parseSyscall("clock_adjtime", string(`name: sys_enter_clock_adjtime
-ID: 378
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("clock_adjtime")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_clock_adjtime
+ID: 381
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4361,9 +4713,10 @@ print fmt: "which_clock: 0x%08lx, utx: 0x%08lx", ((unsigned long)(REC->which_clo
 	if err != nil {
 		return err
 	}
-	cSyscalls["clock_adjtime"] = *cSyscall
-	cSyscall, err = parseSyscall("clock_getres", string(`name: sys_enter_clock_getres
-ID: 376
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("clock_getres")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_clock_getres
+ID: 379
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4379,9 +4732,10 @@ print fmt: "which_clock: 0x%08lx, tp: 0x%08lx", ((unsigned long)(REC->which_cloc
 	if err != nil {
 		return err
 	}
-	cSyscalls["clock_getres"] = *cSyscall
-	cSyscall, err = parseSyscall("clock_nanosleep", string(`name: sys_enter_clock_nanosleep
-ID: 374
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("clock_nanosleep")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_clock_nanosleep
+ID: 377
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4399,9 +4753,10 @@ print fmt: "which_clock: 0x%08lx, flags: 0x%08lx, rqtp: 0x%08lx, rmtp: 0x%08lx",
 	if err != nil {
 		return err
 	}
-	cSyscalls["clock_nanosleep"] = *cSyscall
-	cSyscall, err = parseSyscall("nanosleep", string(`name: sys_enter_nanosleep
-ID: 368
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("nanosleep")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_nanosleep
+ID: 371
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4417,9 +4772,10 @@ print fmt: "rqtp: 0x%08lx, rmtp: 0x%08lx", ((unsigned long)(REC->rqtp)), ((unsig
 	if err != nil {
 		return err
 	}
-	cSyscalls["nanosleep"] = *cSyscall
-	cSyscall, err = parseSyscall("time", string(`name: sys_enter_time
-ID: 353
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("time")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_time
+ID: 356
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4434,9 +4790,10 @@ print fmt: "tloc: 0x%08lx", ((unsigned long)(REC->tloc))
 	if err != nil {
 		return err
 	}
-	cSyscalls["time"] = *cSyscall
-	cSyscall, err = parseSyscall("gettimeofday", string(`name: sys_enter_gettimeofday
-ID: 351
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("gettimeofday")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_gettimeofday
+ID: 354
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4452,9 +4809,10 @@ print fmt: "tv: 0x%08lx, tz: 0x%08lx", ((unsigned long)(REC->tv)), ((unsigned lo
 	if err != nil {
 		return err
 	}
-	cSyscalls["gettimeofday"] = *cSyscall
-	cSyscall, err = parseSyscall("settimeofday", string(`name: sys_enter_settimeofday
-ID: 349
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("settimeofday")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_settimeofday
+ID: 352
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4470,9 +4828,10 @@ print fmt: "tv: 0x%08lx, tz: 0x%08lx", ((unsigned long)(REC->tv)), ((unsigned lo
 	if err != nil {
 		return err
 	}
-	cSyscalls["settimeofday"] = *cSyscall
-	cSyscall, err = parseSyscall("adjtimex", string(`name: sys_enter_adjtimex
-ID: 347
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("adjtimex")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_adjtimex
+ID: 350
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4487,9 +4846,10 @@ print fmt: "txc_p: 0x%08lx", ((unsigned long)(REC->txc_p))
 	if err != nil {
 		return err
 	}
-	cSyscalls["adjtimex"] = *cSyscall
-	cSyscall, err = parseSyscall("kcmp", string(`name: sys_enter_kcmp
-ID: 345
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("kcmp")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_kcmp
+ID: 348
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4508,9 +4868,10 @@ print fmt: "pid1: 0x%08lx, pid2: 0x%08lx, type: 0x%08lx, idx1: 0x%08lx, idx2: 0x
 	if err != nil {
 		return err
 	}
-	cSyscalls["kcmp"] = *cSyscall
-	cSyscall, err = parseSyscall("syslog", string(`name: sys_enter_syslog
-ID: 328
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("syslog")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_syslog
+ID: 331
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4527,9 +4888,10 @@ print fmt: "type: 0x%08lx, buf: 0x%08lx, len: 0x%08lx", ((unsigned long)(REC->ty
 	if err != nil {
 		return err
 	}
-	cSyscalls["syslog"] = *cSyscall
-	cSyscall, err = parseSyscall("membarrier", string(`name: sys_enter_membarrier
-ID: 326
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("membarrier")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_membarrier
+ID: 329
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4545,9 +4907,10 @@ print fmt: "cmd: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC->cmd)), ((unsign
 	if err != nil {
 		return err
 	}
-	cSyscalls["membarrier"] = *cSyscall
-	cSyscall, err = parseSyscall("sched_setscheduler", string(`name: sys_enter_sched_setscheduler
-ID: 301
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sched_setscheduler")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sched_setscheduler
+ID: 304
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4564,9 +4927,10 @@ print fmt: "pid: 0x%08lx, policy: 0x%08lx, param: 0x%08lx", ((unsigned long)(REC
 	if err != nil {
 		return err
 	}
-	cSyscalls["sched_setscheduler"] = *cSyscall
-	cSyscall, err = parseSyscall("sched_setparam", string(`name: sys_enter_sched_setparam
-ID: 299
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sched_setparam")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sched_setparam
+ID: 302
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4582,9 +4946,10 @@ print fmt: "pid: 0x%08lx, param: 0x%08lx", ((unsigned long)(REC->pid)), ((unsign
 	if err != nil {
 		return err
 	}
-	cSyscalls["sched_setparam"] = *cSyscall
-	cSyscall, err = parseSyscall("sched_setattr", string(`name: sys_enter_sched_setattr
-ID: 297
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sched_setattr")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sched_setattr
+ID: 300
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4601,9 +4966,10 @@ print fmt: "pid: 0x%08lx, uattr: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC-
 	if err != nil {
 		return err
 	}
-	cSyscalls["sched_setattr"] = *cSyscall
-	cSyscall, err = parseSyscall("sched_getscheduler", string(`name: sys_enter_sched_getscheduler
-ID: 295
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sched_getscheduler")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sched_getscheduler
+ID: 298
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4618,9 +4984,10 @@ print fmt: "pid: 0x%08lx", ((unsigned long)(REC->pid))
 	if err != nil {
 		return err
 	}
-	cSyscalls["sched_getscheduler"] = *cSyscall
-	cSyscall, err = parseSyscall("sched_getparam", string(`name: sys_enter_sched_getparam
-ID: 293
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sched_getparam")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sched_getparam
+ID: 296
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4636,9 +5003,10 @@ print fmt: "pid: 0x%08lx, param: 0x%08lx", ((unsigned long)(REC->pid)), ((unsign
 	if err != nil {
 		return err
 	}
-	cSyscalls["sched_getparam"] = *cSyscall
-	cSyscall, err = parseSyscall("sched_getattr", string(`name: sys_enter_sched_getattr
-ID: 291
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sched_getattr")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sched_getattr
+ID: 294
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4648,17 +5016,18 @@ format:
 	field:int __syscall_nr;	offset:8;	size:4;	signed:1;
 	field:pid_t pid;	offset:16;	size:8;	signed:0;
 	field:struct sched_attr * uattr;	offset:24;	size:8;	signed:0;
-	field:unsigned int size;	offset:32;	size:8;	signed:0;
+	field:unsigned int usize;	offset:32;	size:8;	signed:0;
 	field:unsigned int flags;	offset:40;	size:8;	signed:0;
 
-print fmt: "pid: 0x%08lx, uattr: 0x%08lx, size: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC->pid)), ((unsigned long)(REC->uattr)), ((unsigned long)(REC->size)), ((unsigned long)(REC->flags))
+print fmt: "pid: 0x%08lx, uattr: 0x%08lx, usize: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC->pid)), ((unsigned long)(REC->uattr)), ((unsigned long)(REC->usize)), ((unsigned long)(REC->flags))
 `))
 	if err != nil {
 		return err
 	}
-	cSyscalls["sched_getattr"] = *cSyscall
-	cSyscall, err = parseSyscall("sched_setaffinity", string(`name: sys_enter_sched_setaffinity
-ID: 289
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sched_setaffinity")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sched_setaffinity
+ID: 292
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4675,9 +5044,10 @@ print fmt: "pid: 0x%08lx, len: 0x%08lx, user_mask_ptr: 0x%08lx", ((unsigned long
 	if err != nil {
 		return err
 	}
-	cSyscalls["sched_setaffinity"] = *cSyscall
-	cSyscall, err = parseSyscall("sched_getaffinity", string(`name: sys_enter_sched_getaffinity
-ID: 287
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sched_getaffinity")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sched_getaffinity
+ID: 290
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4694,9 +5064,10 @@ print fmt: "pid: 0x%08lx, len: 0x%08lx, user_mask_ptr: 0x%08lx", ((unsigned long
 	if err != nil {
 		return err
 	}
-	cSyscalls["sched_getaffinity"] = *cSyscall
-	cSyscall, err = parseSyscall("sched_yield", string(`name: sys_enter_sched_yield
-ID: 285
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sched_yield")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sched_yield
+ID: 288
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4710,9 +5081,10 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["sched_yield"] = *cSyscall
-	cSyscall, err = parseSyscall("sched_get_priority_max", string(`name: sys_enter_sched_get_priority_max
-ID: 283
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sched_get_priority_max")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sched_get_priority_max
+ID: 286
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4727,9 +5099,10 @@ print fmt: "policy: 0x%08lx", ((unsigned long)(REC->policy))
 	if err != nil {
 		return err
 	}
-	cSyscalls["sched_get_priority_max"] = *cSyscall
-	cSyscall, err = parseSyscall("sched_get_priority_min", string(`name: sys_enter_sched_get_priority_min
-ID: 281
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sched_get_priority_min")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sched_get_priority_min
+ID: 284
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4744,9 +5117,10 @@ print fmt: "policy: 0x%08lx", ((unsigned long)(REC->policy))
 	if err != nil {
 		return err
 	}
-	cSyscalls["sched_get_priority_min"] = *cSyscall
-	cSyscall, err = parseSyscall("sched_rr_get_interval", string(`name: sys_enter_sched_rr_get_interval
-ID: 279
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sched_rr_get_interval")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sched_rr_get_interval
+ID: 282
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4762,9 +5136,10 @@ print fmt: "pid: 0x%08lx, interval: 0x%08lx", ((unsigned long)(REC->pid)), ((uns
 	if err != nil {
 		return err
 	}
-	cSyscalls["sched_rr_get_interval"] = *cSyscall
-	cSyscall, err = parseSyscall("getgroups", string(`name: sys_enter_getgroups
-ID: 277
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getgroups")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getgroups
+ID: 280
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4780,9 +5155,10 @@ print fmt: "gidsetsize: 0x%08lx, grouplist: 0x%08lx", ((unsigned long)(REC->gids
 	if err != nil {
 		return err
 	}
-	cSyscalls["getgroups"] = *cSyscall
-	cSyscall, err = parseSyscall("setgroups", string(`name: sys_enter_setgroups
-ID: 275
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("setgroups")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_setgroups
+ID: 278
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4798,9 +5174,10 @@ print fmt: "gidsetsize: 0x%08lx, grouplist: 0x%08lx", ((unsigned long)(REC->gids
 	if err != nil {
 		return err
 	}
-	cSyscalls["setgroups"] = *cSyscall
-	cSyscall, err = parseSyscall("reboot", string(`name: sys_enter_reboot
-ID: 273
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("reboot")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_reboot
+ID: 276
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4818,9 +5195,10 @@ print fmt: "magic1: 0x%08lx, magic2: 0x%08lx, cmd: 0x%08lx, arg: 0x%08lx", ((uns
 	if err != nil {
 		return err
 	}
-	cSyscalls["reboot"] = *cSyscall
-	cSyscall, err = parseSyscall("setns", string(`name: sys_enter_setns
-ID: 271
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("setns")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_setns
+ID: 274
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4836,9 +5214,29 @@ print fmt: "fd: 0x%08lx, nstype: 0x%08lx", ((unsigned long)(REC->fd)), ((unsigne
 	if err != nil {
 		return err
 	}
-	cSyscalls["setns"] = *cSyscall
-	cSyscall, err = parseSyscall("setpriority", string(`name: sys_enter_setpriority
-ID: 265
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("pidfd_open")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_pidfd_open
+ID: 272
+format:
+	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
+	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
+	field:unsigned char common_preempt_count;	offset:3;	size:1;	signed:0;
+	field:int common_pid;	offset:4;	size:4;	signed:1;
+
+	field:int __syscall_nr;	offset:8;	size:4;	signed:1;
+	field:pid_t pid;	offset:16;	size:8;	signed:0;
+	field:unsigned int flags;	offset:24;	size:8;	signed:0;
+
+print fmt: "pid: 0x%08lx, flags: 0x%08lx", ((unsigned long)(REC->pid)), ((unsigned long)(REC->flags))
+`))
+	if err != nil {
+		return err
+	}
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("setpriority")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_setpriority
+ID: 266
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4855,9 +5253,10 @@ print fmt: "which: 0x%08lx, who: 0x%08lx, niceval: 0x%08lx", ((unsigned long)(RE
 	if err != nil {
 		return err
 	}
-	cSyscalls["setpriority"] = *cSyscall
-	cSyscall, err = parseSyscall("getpriority", string(`name: sys_enter_getpriority
-ID: 263
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getpriority")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getpriority
+ID: 264
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4873,9 +5272,10 @@ print fmt: "which: 0x%08lx, who: 0x%08lx", ((unsigned long)(REC->which)), ((unsi
 	if err != nil {
 		return err
 	}
-	cSyscalls["getpriority"] = *cSyscall
-	cSyscall, err = parseSyscall("setregid", string(`name: sys_enter_setregid
-ID: 261
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("setregid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_setregid
+ID: 262
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4891,9 +5291,10 @@ print fmt: "rgid: 0x%08lx, egid: 0x%08lx", ((unsigned long)(REC->rgid)), ((unsig
 	if err != nil {
 		return err
 	}
-	cSyscalls["setregid"] = *cSyscall
-	cSyscall, err = parseSyscall("setgid", string(`name: sys_enter_setgid
-ID: 259
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("setgid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_setgid
+ID: 260
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4908,9 +5309,10 @@ print fmt: "gid: 0x%08lx", ((unsigned long)(REC->gid))
 	if err != nil {
 		return err
 	}
-	cSyscalls["setgid"] = *cSyscall
-	cSyscall, err = parseSyscall("setreuid", string(`name: sys_enter_setreuid
-ID: 257
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("setreuid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_setreuid
+ID: 258
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4926,9 +5328,10 @@ print fmt: "ruid: 0x%08lx, euid: 0x%08lx", ((unsigned long)(REC->ruid)), ((unsig
 	if err != nil {
 		return err
 	}
-	cSyscalls["setreuid"] = *cSyscall
-	cSyscall, err = parseSyscall("setuid", string(`name: sys_enter_setuid
-ID: 255
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("setuid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_setuid
+ID: 256
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4943,9 +5346,10 @@ print fmt: "uid: 0x%08lx", ((unsigned long)(REC->uid))
 	if err != nil {
 		return err
 	}
-	cSyscalls["setuid"] = *cSyscall
-	cSyscall, err = parseSyscall("setresuid", string(`name: sys_enter_setresuid
-ID: 253
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("setresuid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_setresuid
+ID: 254
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4962,9 +5366,10 @@ print fmt: "ruid: 0x%08lx, euid: 0x%08lx, suid: 0x%08lx", ((unsigned long)(REC->
 	if err != nil {
 		return err
 	}
-	cSyscalls["setresuid"] = *cSyscall
-	cSyscall, err = parseSyscall("getresuid", string(`name: sys_enter_getresuid
-ID: 251
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getresuid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getresuid
+ID: 252
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -4981,9 +5386,10 @@ print fmt: "ruidp: 0x%08lx, euidp: 0x%08lx, suidp: 0x%08lx", ((unsigned long)(RE
 	if err != nil {
 		return err
 	}
-	cSyscalls["getresuid"] = *cSyscall
-	cSyscall, err = parseSyscall("setresgid", string(`name: sys_enter_setresgid
-ID: 249
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("setresgid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_setresgid
+ID: 250
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5000,9 +5406,10 @@ print fmt: "rgid: 0x%08lx, egid: 0x%08lx, sgid: 0x%08lx", ((unsigned long)(REC->
 	if err != nil {
 		return err
 	}
-	cSyscalls["setresgid"] = *cSyscall
-	cSyscall, err = parseSyscall("getresgid", string(`name: sys_enter_getresgid
-ID: 247
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getresgid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getresgid
+ID: 248
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5019,9 +5426,10 @@ print fmt: "rgidp: 0x%08lx, egidp: 0x%08lx, sgidp: 0x%08lx", ((unsigned long)(RE
 	if err != nil {
 		return err
 	}
-	cSyscalls["getresgid"] = *cSyscall
-	cSyscall, err = parseSyscall("setfsuid", string(`name: sys_enter_setfsuid
-ID: 245
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("setfsuid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_setfsuid
+ID: 246
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5036,9 +5444,10 @@ print fmt: "uid: 0x%08lx", ((unsigned long)(REC->uid))
 	if err != nil {
 		return err
 	}
-	cSyscalls["setfsuid"] = *cSyscall
-	cSyscall, err = parseSyscall("setfsgid", string(`name: sys_enter_setfsgid
-ID: 243
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("setfsgid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_setfsgid
+ID: 244
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5053,9 +5462,10 @@ print fmt: "gid: 0x%08lx", ((unsigned long)(REC->gid))
 	if err != nil {
 		return err
 	}
-	cSyscalls["setfsgid"] = *cSyscall
-	cSyscall, err = parseSyscall("getpid", string(`name: sys_enter_getpid
-ID: 241
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getpid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getpid
+ID: 242
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5069,9 +5479,10 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["getpid"] = *cSyscall
-	cSyscall, err = parseSyscall("gettid", string(`name: sys_enter_gettid
-ID: 239
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("gettid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_gettid
+ID: 240
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5085,9 +5496,10 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["gettid"] = *cSyscall
-	cSyscall, err = parseSyscall("getppid", string(`name: sys_enter_getppid
-ID: 237
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getppid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getppid
+ID: 238
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5101,9 +5513,10 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["getppid"] = *cSyscall
-	cSyscall, err = parseSyscall("getuid", string(`name: sys_enter_getuid
-ID: 235
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getuid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getuid
+ID: 236
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5117,9 +5530,10 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["getuid"] = *cSyscall
-	cSyscall, err = parseSyscall("geteuid", string(`name: sys_enter_geteuid
-ID: 233
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("geteuid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_geteuid
+ID: 234
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5133,9 +5547,10 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["geteuid"] = *cSyscall
-	cSyscall, err = parseSyscall("getgid", string(`name: sys_enter_getgid
-ID: 231
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getgid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getgid
+ID: 232
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5149,9 +5564,10 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["getgid"] = *cSyscall
-	cSyscall, err = parseSyscall("getegid", string(`name: sys_enter_getegid
-ID: 229
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getegid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getegid
+ID: 230
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5165,9 +5581,10 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["getegid"] = *cSyscall
-	cSyscall, err = parseSyscall("times", string(`name: sys_enter_times
-ID: 227
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("times")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_times
+ID: 228
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5182,9 +5599,10 @@ print fmt: "tbuf: 0x%08lx", ((unsigned long)(REC->tbuf))
 	if err != nil {
 		return err
 	}
-	cSyscalls["times"] = *cSyscall
-	cSyscall, err = parseSyscall("setpgid", string(`name: sys_enter_setpgid
-ID: 225
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("setpgid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_setpgid
+ID: 226
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5200,9 +5618,10 @@ print fmt: "pid: 0x%08lx, pgid: 0x%08lx", ((unsigned long)(REC->pid)), ((unsigne
 	if err != nil {
 		return err
 	}
-	cSyscalls["setpgid"] = *cSyscall
-	cSyscall, err = parseSyscall("getpgid", string(`name: sys_enter_getpgid
-ID: 223
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getpgid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getpgid
+ID: 224
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5217,9 +5636,10 @@ print fmt: "pid: 0x%08lx", ((unsigned long)(REC->pid))
 	if err != nil {
 		return err
 	}
-	cSyscalls["getpgid"] = *cSyscall
-	cSyscall, err = parseSyscall("getpgrp", string(`name: sys_enter_getpgrp
-ID: 221
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getpgrp")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getpgrp
+ID: 222
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5233,9 +5653,10 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["getpgrp"] = *cSyscall
-	cSyscall, err = parseSyscall("getsid", string(`name: sys_enter_getsid
-ID: 219
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getsid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getsid
+ID: 220
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5250,9 +5671,10 @@ print fmt: "pid: 0x%08lx", ((unsigned long)(REC->pid))
 	if err != nil {
 		return err
 	}
-	cSyscalls["getsid"] = *cSyscall
-	cSyscall, err = parseSyscall("setsid", string(`name: sys_enter_setsid
-ID: 217
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("setsid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_setsid
+ID: 218
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5266,9 +5688,10 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["setsid"] = *cSyscall
-	cSyscall, err = parseSyscall("newuname", string(`name: sys_enter_newuname
-ID: 215
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("newuname")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_newuname
+ID: 216
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5283,9 +5706,10 @@ print fmt: "name: 0x%08lx", ((unsigned long)(REC->name))
 	if err != nil {
 		return err
 	}
-	cSyscalls["newuname"] = *cSyscall
-	cSyscall, err = parseSyscall("sethostname", string(`name: sys_enter_sethostname
-ID: 213
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sethostname")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sethostname
+ID: 214
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5301,9 +5725,10 @@ print fmt: "name: 0x%08lx, len: 0x%08lx", ((unsigned long)(REC->name)), ((unsign
 	if err != nil {
 		return err
 	}
-	cSyscalls["sethostname"] = *cSyscall
-	cSyscall, err = parseSyscall("setdomainname", string(`name: sys_enter_setdomainname
-ID: 211
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("setdomainname")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_setdomainname
+ID: 212
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5319,9 +5744,10 @@ print fmt: "name: 0x%08lx, len: 0x%08lx", ((unsigned long)(REC->name)), ((unsign
 	if err != nil {
 		return err
 	}
-	cSyscalls["setdomainname"] = *cSyscall
-	cSyscall, err = parseSyscall("getrlimit", string(`name: sys_enter_getrlimit
-ID: 209
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getrlimit")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getrlimit
+ID: 210
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5337,9 +5763,10 @@ print fmt: "resource: 0x%08lx, rlim: 0x%08lx", ((unsigned long)(REC->resource)),
 	if err != nil {
 		return err
 	}
-	cSyscalls["getrlimit"] = *cSyscall
-	cSyscall, err = parseSyscall("prlimit64", string(`name: sys_enter_prlimit64
-ID: 207
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("prlimit64")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_prlimit64
+ID: 208
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5357,9 +5784,10 @@ print fmt: "pid: 0x%08lx, resource: 0x%08lx, new_rlim: 0x%08lx, old_rlim: 0x%08l
 	if err != nil {
 		return err
 	}
-	cSyscalls["prlimit64"] = *cSyscall
-	cSyscall, err = parseSyscall("setrlimit", string(`name: sys_enter_setrlimit
-ID: 205
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("setrlimit")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_setrlimit
+ID: 206
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5375,9 +5803,10 @@ print fmt: "resource: 0x%08lx, rlim: 0x%08lx", ((unsigned long)(REC->resource)),
 	if err != nil {
 		return err
 	}
-	cSyscalls["setrlimit"] = *cSyscall
-	cSyscall, err = parseSyscall("getrusage", string(`name: sys_enter_getrusage
-ID: 203
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getrusage")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getrusage
+ID: 204
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5393,9 +5822,10 @@ print fmt: "who: 0x%08lx, ru: 0x%08lx", ((unsigned long)(REC->who)), ((unsigned 
 	if err != nil {
 		return err
 	}
-	cSyscalls["getrusage"] = *cSyscall
-	cSyscall, err = parseSyscall("umask", string(`name: sys_enter_umask
-ID: 201
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("umask")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_umask
+ID: 202
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5410,9 +5840,10 @@ print fmt: "mask: 0x%08lx", ((unsigned long)(REC->mask))
 	if err != nil {
 		return err
 	}
-	cSyscalls["umask"] = *cSyscall
-	cSyscall, err = parseSyscall("prctl", string(`name: sys_enter_prctl
-ID: 199
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("prctl")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_prctl
+ID: 200
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5431,9 +5862,10 @@ print fmt: "option: 0x%08lx, arg2: 0x%08lx, arg3: 0x%08lx, arg4: 0x%08lx, arg5: 
 	if err != nil {
 		return err
 	}
-	cSyscalls["prctl"] = *cSyscall
-	cSyscall, err = parseSyscall("getcpu", string(`name: sys_enter_getcpu
-ID: 197
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("getcpu")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_getcpu
+ID: 198
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5450,9 +5882,10 @@ print fmt: "cpup: 0x%08lx, nodep: 0x%08lx, unused: 0x%08lx", ((unsigned long)(RE
 	if err != nil {
 		return err
 	}
-	cSyscalls["getcpu"] = *cSyscall
-	cSyscall, err = parseSyscall("sysinfo", string(`name: sys_enter_sysinfo
-ID: 195
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sysinfo")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sysinfo
+ID: 196
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5467,9 +5900,10 @@ print fmt: "info: 0x%08lx", ((unsigned long)(REC->info))
 	if err != nil {
 		return err
 	}
-	cSyscalls["sysinfo"] = *cSyscall
-	cSyscall, err = parseSyscall("restart_syscall", string(`name: sys_enter_restart_syscall
-ID: 191
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("restart_syscall")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_restart_syscall
+ID: 192
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5483,9 +5917,10 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["restart_syscall"] = *cSyscall
-	cSyscall, err = parseSyscall("rt_sigprocmask", string(`name: sys_enter_rt_sigprocmask
-ID: 189
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("rt_sigprocmask")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_rt_sigprocmask
+ID: 190
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5503,9 +5938,10 @@ print fmt: "how: 0x%08lx, nset: 0x%08lx, oset: 0x%08lx, sigsetsize: 0x%08lx", ((
 	if err != nil {
 		return err
 	}
-	cSyscalls["rt_sigprocmask"] = *cSyscall
-	cSyscall, err = parseSyscall("rt_sigpending", string(`name: sys_enter_rt_sigpending
-ID: 187
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("rt_sigpending")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_rt_sigpending
+ID: 188
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5521,9 +5957,10 @@ print fmt: "uset: 0x%08lx, sigsetsize: 0x%08lx", ((unsigned long)(REC->uset)), (
 	if err != nil {
 		return err
 	}
-	cSyscalls["rt_sigpending"] = *cSyscall
-	cSyscall, err = parseSyscall("rt_sigtimedwait", string(`name: sys_enter_rt_sigtimedwait
-ID: 185
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("rt_sigtimedwait")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_rt_sigtimedwait
+ID: 186
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5541,9 +5978,10 @@ print fmt: "uthese: 0x%08lx, uinfo: 0x%08lx, uts: 0x%08lx, sigsetsize: 0x%08lx",
 	if err != nil {
 		return err
 	}
-	cSyscalls["rt_sigtimedwait"] = *cSyscall
-	cSyscall, err = parseSyscall("kill", string(`name: sys_enter_kill
-ID: 183
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("kill")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_kill
+ID: 184
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5559,9 +5997,10 @@ print fmt: "pid: 0x%08lx, sig: 0x%08lx", ((unsigned long)(REC->pid)), ((unsigned
 	if err != nil {
 		return err
 	}
-	cSyscalls["kill"] = *cSyscall
-	cSyscall, err = parseSyscall("pidfd_send_signal", string(`name: sys_enter_pidfd_send_signal
-ID: 181
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("pidfd_send_signal")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_pidfd_send_signal
+ID: 182
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5579,9 +6018,10 @@ print fmt: "pidfd: 0x%08lx, sig: 0x%08lx, info: 0x%08lx, flags: 0x%08lx", ((unsi
 	if err != nil {
 		return err
 	}
-	cSyscalls["pidfd_send_signal"] = *cSyscall
-	cSyscall, err = parseSyscall("tgkill", string(`name: sys_enter_tgkill
-ID: 179
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("tgkill")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_tgkill
+ID: 180
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5598,9 +6038,10 @@ print fmt: "tgid: 0x%08lx, pid: 0x%08lx, sig: 0x%08lx", ((unsigned long)(REC->tg
 	if err != nil {
 		return err
 	}
-	cSyscalls["tgkill"] = *cSyscall
-	cSyscall, err = parseSyscall("tkill", string(`name: sys_enter_tkill
-ID: 177
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("tkill")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_tkill
+ID: 178
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5616,9 +6057,10 @@ print fmt: "pid: 0x%08lx, sig: 0x%08lx", ((unsigned long)(REC->pid)), ((unsigned
 	if err != nil {
 		return err
 	}
-	cSyscalls["tkill"] = *cSyscall
-	cSyscall, err = parseSyscall("rt_sigqueueinfo", string(`name: sys_enter_rt_sigqueueinfo
-ID: 175
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("rt_sigqueueinfo")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_rt_sigqueueinfo
+ID: 176
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5635,9 +6077,10 @@ print fmt: "pid: 0x%08lx, sig: 0x%08lx, uinfo: 0x%08lx", ((unsigned long)(REC->p
 	if err != nil {
 		return err
 	}
-	cSyscalls["rt_sigqueueinfo"] = *cSyscall
-	cSyscall, err = parseSyscall("rt_tgsigqueueinfo", string(`name: sys_enter_rt_tgsigqueueinfo
-ID: 173
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("rt_tgsigqueueinfo")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_rt_tgsigqueueinfo
+ID: 174
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5655,9 +6098,10 @@ print fmt: "tgid: 0x%08lx, pid: 0x%08lx, sig: 0x%08lx, uinfo: 0x%08lx", ((unsign
 	if err != nil {
 		return err
 	}
-	cSyscalls["rt_tgsigqueueinfo"] = *cSyscall
-	cSyscall, err = parseSyscall("sigaltstack", string(`name: sys_enter_sigaltstack
-ID: 171
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sigaltstack")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sigaltstack
+ID: 172
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5673,9 +6117,10 @@ print fmt: "uss: 0x%08lx, uoss: 0x%08lx", ((unsigned long)(REC->uss)), ((unsigne
 	if err != nil {
 		return err
 	}
-	cSyscalls["sigaltstack"] = *cSyscall
-	cSyscall, err = parseSyscall("rt_sigaction", string(`name: sys_enter_rt_sigaction
-ID: 169
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("rt_sigaction")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_rt_sigaction
+ID: 170
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5693,9 +6138,10 @@ print fmt: "sig: 0x%08lx, act: 0x%08lx, oact: 0x%08lx, sigsetsize: 0x%08lx", ((u
 	if err != nil {
 		return err
 	}
-	cSyscalls["rt_sigaction"] = *cSyscall
-	cSyscall, err = parseSyscall("pause", string(`name: sys_enter_pause
-ID: 167
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("pause")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_pause
+ID: 168
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5709,9 +6155,10 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["pause"] = *cSyscall
-	cSyscall, err = parseSyscall("rt_sigsuspend", string(`name: sys_enter_rt_sigsuspend
-ID: 165
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("rt_sigsuspend")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_rt_sigsuspend
+ID: 166
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5727,9 +6174,10 @@ print fmt: "unewset: 0x%08lx, sigsetsize: 0x%08lx", ((unsigned long)(REC->unewse
 	if err != nil {
 		return err
 	}
-	cSyscalls["rt_sigsuspend"] = *cSyscall
-	cSyscall, err = parseSyscall("ptrace", string(`name: sys_enter_ptrace
-ID: 163
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("ptrace")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_ptrace
+ID: 164
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5747,9 +6195,10 @@ print fmt: "request: 0x%08lx, pid: 0x%08lx, addr: 0x%08lx, data: 0x%08lx", ((uns
 	if err != nil {
 		return err
 	}
-	cSyscalls["ptrace"] = *cSyscall
-	cSyscall, err = parseSyscall("capget", string(`name: sys_enter_capget
-ID: 161
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("capget")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_capget
+ID: 162
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5765,9 +6214,10 @@ print fmt: "header: 0x%08lx, dataptr: 0x%08lx", ((unsigned long)(REC->header)), 
 	if err != nil {
 		return err
 	}
-	cSyscalls["capget"] = *cSyscall
-	cSyscall, err = parseSyscall("capset", string(`name: sys_enter_capset
-ID: 159
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("capset")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_capset
+ID: 160
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5783,9 +6233,10 @@ print fmt: "header: 0x%08lx, data: 0x%08lx", ((unsigned long)(REC->header)), ((u
 	if err != nil {
 		return err
 	}
-	cSyscalls["capset"] = *cSyscall
-	cSyscall, err = parseSyscall("sysctl", string(`name: sys_enter_sysctl
-ID: 157
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("sysctl")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_sysctl
+ID: 158
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5800,9 +6251,10 @@ print fmt: "args: 0x%08lx", ((unsigned long)(REC->args))
 	if err != nil {
 		return err
 	}
-	cSyscalls["sysctl"] = *cSyscall
-	cSyscall, err = parseSyscall("exit", string(`name: sys_enter_exit
-ID: 150
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("exit")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_exit
+ID: 151
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5817,9 +6269,10 @@ print fmt: "error_code: 0x%08lx", ((unsigned long)(REC->error_code))
 	if err != nil {
 		return err
 	}
-	cSyscalls["exit"] = *cSyscall
-	cSyscall, err = parseSyscall("exit_group", string(`name: sys_enter_exit_group
-ID: 148
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("exit_group")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_exit_group
+ID: 149
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5834,9 +6287,10 @@ print fmt: "error_code: 0x%08lx", ((unsigned long)(REC->error_code))
 	if err != nil {
 		return err
 	}
-	cSyscalls["exit_group"] = *cSyscall
-	cSyscall, err = parseSyscall("waitid", string(`name: sys_enter_waitid
-ID: 146
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("waitid")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_waitid
+ID: 147
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5855,9 +6309,10 @@ print fmt: "which: 0x%08lx, upid: 0x%08lx, infop: 0x%08lx, options: 0x%08lx, ru:
 	if err != nil {
 		return err
 	}
-	cSyscalls["waitid"] = *cSyscall
-	cSyscall, err = parseSyscall("wait4", string(`name: sys_enter_wait4
-ID: 144
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("wait4")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_wait4
+ID: 145
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5875,9 +6330,10 @@ print fmt: "upid: 0x%08lx, stat_addr: 0x%08lx, options: 0x%08lx, ru: 0x%08lx", (
 	if err != nil {
 		return err
 	}
-	cSyscalls["wait4"] = *cSyscall
-	cSyscall, err = parseSyscall("personality", string(`name: sys_enter_personality
-ID: 139
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("personality")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_personality
+ID: 140
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5892,9 +6348,10 @@ print fmt: "personality: 0x%08lx", ((unsigned long)(REC->personality))
 	if err != nil {
 		return err
 	}
-	cSyscalls["personality"] = *cSyscall
-	cSyscall, err = parseSyscall("set_tid_address", string(`name: sys_enter_set_tid_address
-ID: 135
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("set_tid_address")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_set_tid_address
+ID: 136
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5909,9 +6366,10 @@ print fmt: "tidptr: 0x%08lx", ((unsigned long)(REC->tidptr))
 	if err != nil {
 		return err
 	}
-	cSyscalls["set_tid_address"] = *cSyscall
-	cSyscall, err = parseSyscall("fork", string(`name: sys_enter_fork
-ID: 133
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("fork")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_fork
+ID: 134
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5925,9 +6383,10 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["fork"] = *cSyscall
-	cSyscall, err = parseSyscall("vfork", string(`name: sys_enter_vfork
-ID: 131
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("vfork")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_vfork
+ID: 132
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5941,9 +6400,10 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["vfork"] = *cSyscall
-	cSyscall, err = parseSyscall("clone", string(`name: sys_enter_clone
-ID: 129
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("clone")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_clone
+ID: 130
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5962,9 +6422,29 @@ print fmt: "clone_flags: 0x%08lx, newsp: 0x%08lx, parent_tidptr: 0x%08lx, child_
 	if err != nil {
 		return err
 	}
-	cSyscalls["clone"] = *cSyscall
-	cSyscall, err = parseSyscall("unshare", string(`name: sys_enter_unshare
-ID: 127
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("clone3")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_clone3
+ID: 128
+format:
+	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
+	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
+	field:unsigned char common_preempt_count;	offset:3;	size:1;	signed:0;
+	field:int common_pid;	offset:4;	size:4;	signed:1;
+
+	field:int __syscall_nr;	offset:8;	size:4;	signed:1;
+	field:struct clone_args * uargs;	offset:16;	size:8;	signed:0;
+	field:size_t size;	offset:24;	size:8;	signed:0;
+
+print fmt: "uargs: 0x%08lx, size: 0x%08lx", ((unsigned long)(REC->uargs)), ((unsigned long)(REC->size))
+`))
+	if err != nil {
+		return err
+	}
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("unshare")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_unshare
+ID: 126
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
 	field:unsigned char common_flags;	offset:2;	size:1;	signed:0;
@@ -5979,8 +6459,9 @@ print fmt: "unshare_flags: 0x%08lx", ((unsigned long)(REC->unshare_flags))
 	if err != nil {
 		return err
 	}
-	cSyscalls["unshare"] = *cSyscall
-	cSyscall, err = parseSyscall("mmap", string(`name: sys_enter_mmap
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("mmap")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_mmap
 ID: 101
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
@@ -6001,8 +6482,9 @@ print fmt: "addr: 0x%08lx, len: 0x%08lx, prot: 0x%08lx, flags: 0x%08lx, fd: 0x%0
 	if err != nil {
 		return err
 	}
-	cSyscalls["mmap"] = *cSyscall
-	cSyscall, err = parseSyscall("modify_ldt", string(`name: sys_enter_modify_ldt
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("modify_ldt")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_modify_ldt
 ID: 99
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
@@ -6020,8 +6502,9 @@ print fmt: "func: 0x%08lx, ptr: 0x%08lx, bytecount: 0x%08lx", ((unsigned long)(R
 	if err != nil {
 		return err
 	}
-	cSyscalls["modify_ldt"] = *cSyscall
-	cSyscall, err = parseSyscall("ioperm", string(`name: sys_enter_ioperm
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("ioperm")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_ioperm
 ID: 96
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
@@ -6039,8 +6522,9 @@ print fmt: "from: 0x%08lx, num: 0x%08lx, turn_on: 0x%08lx", ((unsigned long)(REC
 	if err != nil {
 		return err
 	}
-	cSyscalls["ioperm"] = *cSyscall
-	cSyscall, err = parseSyscall("iopl", string(`name: sys_enter_iopl
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("iopl")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_iopl
 ID: 94
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
@@ -6056,8 +6540,9 @@ print fmt: "level: 0x%08lx", ((unsigned long)(REC->level))
 	if err != nil {
 		return err
 	}
-	cSyscalls["iopl"] = *cSyscall
-	cSyscall, err = parseSyscall("rt_sigreturn", string(`name: sys_enter_rt_sigreturn
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("rt_sigreturn")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_rt_sigreturn
 ID: 58
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
@@ -6072,8 +6557,9 @@ print fmt: ""
 	if err != nil {
 		return err
 	}
-	cSyscalls["rt_sigreturn"] = *cSyscall
-	cSyscall, err = parseSyscall("arch_prctl", string(`name: sys_enter_arch_prctl
+	cSyscalls[name] = *cSyscall
+	name = relateSyscallName("arch_prctl")
+	cSyscall, err = parseSyscall(name, string(`name: sys_enter_arch_prctl
 ID: 56
 format:
 	field:unsigned short common_type;	offset:0;	size:2;	signed:0;
@@ -6090,6 +6576,6 @@ print fmt: "option: 0x%08lx, arg2: 0x%08lx", ((unsigned long)(REC->option)), ((u
 	if err != nil {
 		return err
 	}
-	cSyscalls["arch_prctl"] = *cSyscall
+	cSyscalls[name] = *cSyscall
 	return nil
 }
