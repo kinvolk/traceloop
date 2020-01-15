@@ -533,7 +533,7 @@ func (sb *StraceBack) recycleTracelets() error {
 			continue
 		}
 		fmt.Printf("recycle %d: time %v - %v\n", i, sb.tracelets[i].timeDeletion.Format(time.RFC3339), time.Now())
-		if sb.tracelets[i].timeDeletion.Add(time.Minute).Before(time.Now()) {
+		if sb.tracelets[i].timeDeletion.Add(time.Hour * 3).Before(time.Now()) {
 			fmt.Printf("Deleting tracelet #%d\n", i)
 			sb.CloseProg(uint32(i))
 
