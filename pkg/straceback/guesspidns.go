@@ -20,9 +20,10 @@ type guessStatus C.struct_guess_status_t
 const (
 	// When reading kernel structs at different offsets, don't go over that
 	// limit. This is an arbitrary choice to avoid infinite loops.
-	threshold_nsproxy = 2500 // 1856
-	threshold_utsns   = 40   // 32
-	threshold_ino     = 500  // 184 + 16
+	// On Linux 5.5.5-200.fc31.x86_64, I have the following offsets: 2784 8 432
+	threshold_nsproxy = 3500
+	threshold_utsns   = 40
+	threshold_ino     = 500
 )
 
 // These constants should be in sync with the equivalent definitions in the ebpf program.
