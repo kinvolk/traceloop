@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"regexp"
 	"strings"
 	"time"
 	"unsafe"
@@ -12,6 +11,7 @@ import (
 	bpflib "github.com/iovisor/gobpf/elf"
 
 	"github.com/kinvolk/traceloop/pkg/annotationpublisher"
+	"github.com/kinvolk/traceloop/pkg/podcgroup"
 	"github.com/kinvolk/traceloop/pkg/podinformer"
 	"github.com/kinvolk/traceloop/pkg/procinformer"
 	"github.com/kinvolk/traceloop/pkg/tracemeta"
@@ -236,35 +236,6 @@ func NewTracer(withPodDiscovery bool, withProcInformer bool, withAnnotationPubli
 	return sb, nil
 }
 
-func extractIdFromCgroupPath(cgroupPath string) (podUid, containerID string) {
-	if cgroupPath == "" {
-		return
-	}
-
-	// Two examples of params. Both are supported:
-	// /sys/fs/cgroup/systemd/kubepods/besteffort/pod91a8fc3a-0ecf-48b4-81bf-78a7275d348c/f75aff467357c5d0ddd47cb7ad87ed38746e018992586ff66198a5c11218f634
-	// /sys/fs/cgroup/systemd/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod5759a1ae_36ca_48a8_b20a_b0b5c8a90fb8.slice/docker-c8b38413c88eefe063b8cd3f01c16be5e3bda9693a19a68a88807baca9feb937.scope
-	paramRegexp1, _ := regexp.Compile("^/sys/fs/cgroup/systemd.*/kubepods.*[/-]pod([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}).*/([0-9a-f]{64})")
-	paramRegexp2, _ := regexp.Compile("^/sys/fs/cgroup/systemd.*/kubepods.*[/-]pod([a-f0-9]{8}_[a-f0-9]{4}_[a-f0-9]{4}_[a-f0-9]{4}_[a-f0-9]{12}).*/docker-([0-9a-f]{64}).scope")
-
-	matches := paramRegexp1.FindStringSubmatch(cgroupPath)
-	if len(matches) == 3 {
-		podUid = matches[1]
-		containerID = "docker://" + matches[2]
-		return
-	}
-
-	matches = paramRegexp2.FindStringSubmatch(cgroupPath)
-	if len(matches) == 3 {
-		podUid = strings.Replace(matches[1], "_", "-", -1)
-		containerID = "docker://" + matches[2]
-		return
-	}
-
-	fmt.Printf("Error: could not parse %s\n", cgroupPath)
-	return
-}
-
 func (sb *StraceBack) updater() (out string) {
 	ticker := time.NewTicker(1000 * time.Millisecond)
 	defer ticker.Stop()
@@ -405,7 +376,7 @@ func (sb *StraceBack) updater() (out string) {
 			}
 			eventC := (*C.struct_container_event_t)(unsafe.Pointer(&(data)[0]))
 
-			podUid, containerID := extractIdFromCgroupPath(C.GoString(&eventC.param[0]))
+			podUid, containerID := podcgroup.ExtractIDFromCgroupPath(C.GoString(&eventC.param[0]))
 
 			fmt.Printf("New container event: type %d: utsns %v assigned to slot %d (%q, pid: %v, tid: %v)\n",
 				eventC.typ, eventC.utsns, eventC.idx, C.GoString(&eventC.comm[0]),
