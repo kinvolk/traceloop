@@ -27,7 +27,8 @@ DOCKER_BRANCH_IMAGE?=kinvolk/traceloop:$(IMAGE_BRANCH_TAG)
 # If you can use docker without being root, you can do "make SUDO="
 SUDO=$(shell docker info >/dev/null 2>&1 || echo "sudo -E")
 
-all: build-docker-image build-bpf-object install-generated-go bin-traceloop docker/image
+.PHONY: all
+all: build-docker-image build-bpf-object install-generated-go bin-traceloop test docker/image
 
 build-docker-image:
 	$(SUDO) docker build -t $(BUILDER_DOCKER_IMAGE) -f $(BUILDER_DOCKER_FILE) .
@@ -73,6 +74,10 @@ bin-traceloop:
 	GO111MODULE=on go build \
 		-ldflags $(VERSIONLDFLAGS) \
 		-o traceloop traceloop.go
+
+.PHONY: test
+test:
+	go test ./pkg/...
 
 docker/image:
 	$(SUDO) docker build -t $(DOCKER_IMAGE) -f $(DOCKER_FILE) .
