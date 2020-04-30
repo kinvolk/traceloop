@@ -376,7 +376,7 @@ func (sb *StraceBack) updater() (out string) {
 			}
 			eventC := (*C.struct_container_event_t)(unsafe.Pointer(&(data)[0]))
 
-			podUid, containerID := podcgroup.ExtractIdFromCgroupPath(C.GoString(&eventC.param[0]))
+			podUid, containerID := podcgroup.ExtractIDFromCgroupPath(C.GoString(&eventC.param[0]))
 
 			fmt.Printf("New container event: type %d: utsns %v assigned to slot %d (%q, pid: %v, tid: %v)\n",
 				eventC.typ, eventC.utsns, eventC.idx, C.GoString(&eventC.comm[0]),

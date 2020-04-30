@@ -97,7 +97,7 @@ func (p *ProcInformer) update() error {
 		}
 
 		cgroupProcFile := filepath.Join(procPath, fileInfo.Name(), "cgroup")
-		podUid, containerID := podcgroup.ExtractIdFromCgroupProcFile(cgroupProcFile)
+		podUid, containerID := podcgroup.ExtractIDFromCgroupProcFile(cgroupProcFile)
 		if podUid == "" || containerID == "" {
 			continue
 		}
