@@ -139,11 +139,13 @@ func (p *PodInformer) GetContainerIDFromPod(namespace, podname string, container
 
 func (p *PodInformer) GetPodFromContainerID(containerID string) (info *ContainerInfo, err error) {
 	for k, cids := range p.containerIDsByKey {
+		fmt.Printf("GetPodFromContainerID(%q): iterate on key %q (#%d entries)\n", containerID, k, len(cids))
 		ns, n, err2 := cache.SplitMetaNamespaceKey(k)
 		if err2 != nil {
 			return nil, err2
 		}
 		for i, cid := range cids {
+			fmt.Printf("    GetPodFromContainerID(containerID): iterate over #%d %q\n", i, cid)
 			if cid == containerID {
 				return &ContainerInfo{
 					UID:         "",
@@ -206,7 +208,7 @@ func (p *PodInformer) syncToStdout(key string) error {
 			if s.ContainerID == "" {
 				continue
 			}
-			fmt.Printf("    %s\n", s.ContainerID)
+			fmt.Printf("    containerID=%q key=%q i=%d\n", s.ContainerID, key, i)
 
 			p.containerIDsByKey[key] = append(p.containerIDsByKey[key], s.ContainerID)
 
