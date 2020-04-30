@@ -499,11 +499,29 @@ func (sb *StraceBack) publish() {
 func (sb *StraceBack) recycleTracelets() error {
 	newIndexes := []int{}
 	for i := 0; i < int(C.MaxPooledPrograms); i++ {
-		if sb.tracelets[i] == nil || sb.tracelets[i].status != traceletStatusDeleted {
+		if sb.tracelets[i] == nil {
 			continue
 		}
-		fmt.Printf("recycle %d: time %v - %v\n", i, sb.tracelets[i].timeDeletion.Format(time.RFC3339), time.Now())
-		if sb.tracelets[i].timeDeletion.Add(time.Hour * 3).Before(time.Now()) {
+		var eventTime time.Time
+		var timeout time.Duration
+		switch sb.tracelets[i].status {
+		case traceletStatusDeleted:
+			timeout = time.Hour * 3
+			eventTime = sb.tracelets[i].timeDeletion
+		case traceletStatusCreated:
+			if sb.tracelets[i].podname != "" {
+				continue
+			}
+			// if the BPF program detects a new container but it's
+			// not known by Kybernetes after the following timeout,
+			// that's probably the infrastructure container
+			// (/pause or /usr/bin/pod)
+			timeout = time.Second * 10
+			eventTime = sb.tracelets[i].timeCreation
+		default:
+			continue
+		}
+		if eventTime.Add(timeout).Before(time.Now()) {
 			fmt.Printf("Deleting tracelet #%d\n", i)
 			sb.CloseProg(uint32(i))
 
