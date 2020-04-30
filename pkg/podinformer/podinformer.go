@@ -19,11 +19,11 @@ limitations under the License.
  * and adapted for traceloop.
  */
 
-/* Package podinformer keeps track of pods with the containerIDs.
- *
- * Equivalent information can be retrieved with:
- * kubectl get pods -o=jsonpath='{.items[*].status.containerStatuses[*].containerID}'
- */
+// Package podinformer keeps track of pods with the containerIDs.
+//
+// Equivalent information can be retrieved with:
+// kubectl get pods -o=jsonpath='{.items[*].status.containerStatuses[*].containerID}'
+//
 package podinformer
 
 import (

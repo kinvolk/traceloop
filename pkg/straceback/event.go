@@ -126,9 +126,8 @@ func retToStr(ret uint64, caps uint64) string {
 			return fmt.Sprintf("-1 (%s) [%s]", syscall.Errno(-errNo).Error(), capDecode(caps))
 		}
 		return fmt.Sprintf("-1 (%s)", syscall.Errno(-errNo).Error())
-	} else {
-		return fmt.Sprintf("%d", ret)
 	}
+	return fmt.Sprintf("%d", ret)
 }
 
 func eventsToString(events []Event) (ret string) {

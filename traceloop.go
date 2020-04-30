@@ -14,10 +14,10 @@ import (
 )
 
 var (
-	serveHttp bool
-	withPidns bool
+	serveHTTP  bool
+	withPidNS  bool
 	dumpOnExit bool
-	paths     []string
+	paths      []string
 )
 
 // This variable is set during build.
@@ -50,8 +50,8 @@ func main() {
 	}
 	switch os.Args[1] {
 	case "guess":
-		guessCmd.Parse(os.Args[2:])
-		withPidns = true
+		_ = guessCmd.Parse(os.Args[2:])
+		withPidNS = true
 		args := guessCmd.Args()
 		if len(args) > 0 {
 			fmt.Fprintf(os.Stderr, "Unexpected additional arguments: %q.\n", args)
@@ -59,9 +59,9 @@ func main() {
 			os.Exit(1)
 		}
 	case "k8s":
-		k8sCmd.Parse(os.Args[2:])
-		withPidns = true
-		serveHttp = true
+		_ = k8sCmd.Parse(os.Args[2:])
+		withPidNS = true
+		serveHTTP = true
 		args := k8sCmd.Args()
 		if len(args) > 0 {
 			fmt.Fprintf(os.Stderr, "Unexpected additional arguments: %q.\n", args)
@@ -69,8 +69,8 @@ func main() {
 			os.Exit(1)
 		}
 	case "serve":
-		serveCmd.Parse(os.Args[2:])
-		serveHttp = true
+		_ = serveCmd.Parse(os.Args[2:])
+		serveHTTP = true
 		args := serveCmd.Args()
 		if len(args) > 0 {
 			fmt.Fprintf(os.Stderr, "Unexpected additional arguments: %q.\n", args)
@@ -78,7 +78,7 @@ func main() {
 			os.Exit(1)
 		}
 	case "cgroups":
-		cgroupsCmd.Parse(os.Args[2:])
+		_ = cgroupsCmd.Parse(os.Args[2:])
 		dumpOnExit = *dumpOnExitEnable
 		paths = cgroupsCmd.Args()
 		if len(paths) == 0 {
@@ -92,25 +92,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	t, err := straceback.NewTracer(withPidns, withPidns, withPidns)
+	t, err := straceback.NewTracer(withPidNS, withPidNS, withPidNS)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 
-	if withPidns && !serveHttp {
+	if withPidNS && !serveHTTP {
 		sig := make(chan os.Signal, 1)
-		signal.Notify(sig, os.Interrupt, os.Kill)
-		select {
-		case <-sig:
-			fmt.Printf("Interrupted!\n")
-			break
-		}
+		signal.Notify(sig, os.Interrupt)
+		<-sig
+		fmt.Printf("Interrupted!\n")
 		t.DumpAll()
 		os.Exit(0)
 	}
 
-	if serveHttp {
+	if serveHTTP {
 		listHandler := func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "%s", t.List())
 		}
@@ -259,7 +256,7 @@ func main() {
 	}
 
 	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, os.Kill)
+	signal.Notify(sig, os.Interrupt)
 
 	ticker := time.Tick(time.Millisecond * 250)
 
