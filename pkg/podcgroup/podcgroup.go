@@ -9,9 +9,6 @@ import (
 )
 
 var (
-	cgroupProcFileContentRegexp1 *regexp.Regexp
-	cgroupProcFileContentRegexp2 *regexp.Regexp
-
 	podIDRegexp, containerIDRegexp         *regexp.Regexp
 	podIDMatchCount, containerIDMatchCount int
 )
@@ -25,14 +22,6 @@ func init() {
 	// idx 0 is whole match, idx 1 is the prefix without dash or empty if none, idx 2 is the ID
 	containerIDRegexp = regexp.MustCompile(`(?:([a-z]*)-)?([0-9a-f]{64})`)
 	containerIDMatchCount = 3
-
-	// Examples:
-	// 1:name=systemd:/kubepods/burstable/pod533bebda-632d-4a45-9f32-237bcae5b1fc/f2c9e02d3140d5d72f23640b79596dcb043cc3ee818fb61507ff2dfb63dd0211
-	// 1:name=systemd:/kubepods.slice/kubepods-besteffort.slice/kubepods-besteffort-pod1aecc643_23ea_11e9_beec_06c846f19394.slice/docker-da9977a4f9abe14ab2fa87d3780d92fd615b97cc3107fcd4a851f01857cb8ff8.scope
-	// 1:name=systemd:/kubepods.slice/kubepods-burstable.slice/kubepods-burstable-pod12345678_1234_1234_1234_123456789012.slice/crio-f75aff467357c5d0ddd47cb7ad87ed38746e018992586ff66198a5c11218f634.scope
-	cgroupProcFileContentRegexp1 = regexp.MustCompile("\n1:name=systemd:.*/kubepods.*[/-]pod([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}).*/([0-9a-f]{64})")
-	cgroupProcFileContentRegexp2 = regexp.MustCompile("\n1:name=systemd:.*/kubepods.*[/-]pod([a-f0-9]{8}_[a-f0-9]{4}_[a-f0-9]{4}_[a-f0-9]{4}_[a-f0-9]{12}).*/([a-z]*)-([0-9a-f]{64})")
-
 }
 
 // podContainerIDExtractor finds the pod uid and container id from a cgroup
