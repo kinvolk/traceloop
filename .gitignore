@@ -2,3 +2,4 @@
 /bpf/*.o
 /bpf/straceback-assets-bpf.go
 /traceloop
+/tools/golangci-lint
