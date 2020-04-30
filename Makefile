@@ -69,6 +69,11 @@ install-generated-go:
 delete-docker-image:
 	$(SUDO) docker rmi -f $(BUILDER_DOCKER_IMAGE)
 
+tools/golangci-lint: tools/go.mod tools/go.sum
+	cd tools && \
+		go build -o golangci-lint \
+			github.com/golangci/golangci-lint/cmd/golangci-lint
+
 bin-traceloop:
 	@echo "Building version $(VERSION)"
 	GO111MODULE=on go build \

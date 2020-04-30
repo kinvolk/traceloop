@@ -67,7 +67,7 @@ type Tracelet struct {
 	pm           *bpflib.PerfMap
 	queueMap     *bpflib.Map
 	cgroupPath   string
-	cgroupId     uint64
+	cgroupID     uint64
 	eventChan    chan []byte
 	lostChan     chan uint64
 	description  string
@@ -131,7 +131,6 @@ func NewTracer(withPodDiscovery bool, withProcInformer bool, withAnnotationPubli
 	if sb.mainProg == nil {
 		return nil, fmt.Errorf("BPF not supported")
 	}
-	sb.mainProg = sb.mainProg
 
 	sectionParams := make(map[string]bpflib.SectionParams)
 	sectionParams["maps/container_events"] = bpflib.SectionParams{
@@ -147,7 +146,7 @@ func NewTracer(withPodDiscovery bool, withProcInformer bool, withAnnotationPubli
 	sb.tailCallCaps = sb.mainProg.Map("tail_call_caps")
 	sb.syscallsDef = sb.mainProg.Map("syscalls")
 
-	for i, _ := range syscallNames {
+	for i := range syscallNames {
 		var nr uint64 = uint64(i)
 		var def [6]uint64 = syscallGetDef(i)
 		if err := sb.mainProg.UpdateElement(sb.syscallsDef, unsafe.Pointer(&nr), unsafe.Pointer(&def[0]), 0); err != nil {
@@ -376,12 +375,12 @@ func (sb *StraceBack) updater() (out string) {
 			}
 			eventC := (*C.struct_container_event_t)(unsafe.Pointer(&(data)[0]))
 
-			podUid, containerID := podcgroup.ExtractIDFromCgroupPath(C.GoString(&eventC.param[0]))
+			podUID, containerID := podcgroup.ExtractIDFromCgroupPath(C.GoString(&eventC.param[0]))
 
 			fmt.Printf("New container event: type %d: utsns %v assigned to slot %d (%q, pid: %v, tid: %v)\n",
 				eventC.typ, eventC.utsns, eventC.idx, C.GoString(&eventC.comm[0]),
 				eventC.pid>>32, eventC.pid&0xFFFFFFFF)
-			fmt.Printf("    %s %s (%s)\n", containerID, podUid, C.GoString(&eventC.param[0]))
+			fmt.Printf("    %s %s (%s)\n", containerID, podUID, C.GoString(&eventC.param[0]))
 
 			if eventC.idx < C.uint(C.MaxPooledPrograms) && sb.tracelets[eventC.idx] != nil {
 				sb.tracelets[eventC.idx].traceID = fmt.Sprintf("%016x", uint64(eventC.timestamp))
@@ -398,7 +397,7 @@ func (sb *StraceBack) updater() (out string) {
 						}
 					} else if eventC.typ == C.ContainerEventTypeUpdate && containerID != "" {
 						sb.tracelets[eventC.idx].containerID = containerID
-						sb.tracelets[eventC.idx].uid = podUid
+						sb.tracelets[eventC.idx].uid = podUID
 						sb.tracelets[eventC.idx].status = traceletStatusReady
 					} else if eventC.typ == C.ContainerEventTypeDelete {
 						sb.tracelets[eventC.idx].status = traceletStatusDeleted
@@ -488,7 +487,7 @@ func (sb *StraceBack) publish() {
 
 	out, err := json.Marshal(ts)
 	if err != nil {
-		fmt.Printf("Error marshalling traces: %v\n", err)
+		fmt.Printf("Error marshaling traces: %v\n", err)
 		return
 	}
 
@@ -670,7 +669,7 @@ func getDummyTracelet(mainProg *bpflib.Module, tailCallEnter *bpflib.Map, tailCa
 }
 
 func (sb *StraceBack) AddProg(cgroupPath string, description string) (uint32, error) {
-	cgroupId, err := GetCgroupID(cgroupPath)
+	cgroupID, err := GetCgroupID(cgroupPath)
 	if err != nil {
 		return 0, err
 	}
@@ -689,7 +688,7 @@ func (sb *StraceBack) AddProg(cgroupPath string, description string) (uint32, er
 	tracelet := Tracelet{
 		description: description,
 		cgroupPath:  cgroupPath,
-		cgroupId:    cgroupId,
+		cgroupID:    cgroupID,
 		eventChan:   make(chan []byte),
 		lostChan:    make(chan uint64),
 		status:      traceletStatusManual,
@@ -740,7 +739,7 @@ func (sb *StraceBack) AddProg(cgroupPath string, description string) (uint32, er
 	if fdEnter == -1 || fdExit == -1 {
 		return 0, fmt.Errorf("couldn't find tracepoint fd")
 	}
-	if err := sb.mainProg.UpdateElement(sb.cgroupMap, unsafe.Pointer(&cgroupId), unsafe.Pointer(&idx), 0); err != nil {
+	if err := sb.mainProg.UpdateElement(sb.cgroupMap, unsafe.Pointer(&cgroupID), unsafe.Pointer(&idx), 0); err != nil {
 		return 0, fmt.Errorf("error updating tail call map: %v", err)
 	}
 	if err := sb.mainProg.UpdateElement(sb.tailCallEnter, unsafe.Pointer(&idx), unsafe.Pointer(&fdEnter), 0); err != nil {
@@ -886,7 +885,7 @@ func (sb *StraceBack) Stop() {
 	if sb.newContainerEventsMap != nil {
 		sb.newContainerEventsMap.PollStop()
 	}
-	for i, _ := range sb.tracelets {
+	for i := range sb.tracelets {
 		if sb.tracelets[i] != nil {
 			sb.tracelets[i].pm.PollStop()
 		}

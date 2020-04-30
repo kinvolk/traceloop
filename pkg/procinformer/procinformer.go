@@ -97,8 +97,8 @@ func (p *ProcInformer) update() error {
 		}
 
 		cgroupProcFile := filepath.Join(procPath, fileInfo.Name(), "cgroup")
-		podUid, containerID := podcgroup.ExtractIDFromCgroupProcFile(cgroupProcFile)
-		if podUid == "" || containerID == "" {
+		podUID, containerID := podcgroup.ExtractIDFromCgroupProcFile(cgroupProcFile)
+		if podUID == "" || containerID == "" {
 			continue
 		}
 
@@ -107,10 +107,10 @@ func (p *ProcInformer) update() error {
 		p.procInformerChan <- ProcInfo{
 			Utsns:       utsns,
 			ContainerID: containerID,
-			PodUID:      podUid,
+			PodUID:      podUID,
 		}
 	}
-	for utsns, _ := range lookups {
+	for utsns := range lookups {
 		p.procInformerChan <- ProcInfo{
 			Utsns:       utsns,
 			ContainerID: "",

@@ -21,17 +21,17 @@ const (
 	// When reading kernel structs at different offsets, don't go over that
 	// limit. This is an arbitrary choice to avoid infinite loops.
 	// On Linux 5.5.5-200.fc31.x86_64, I have the following offsets: 2784 8 432
-	threshold_nsproxy = 3500
-	threshold_utsns   = 40
-	threshold_ino     = 500
+	thresholdNSProxy = 3500
+	thresholdUTSNS   = 40
+	thresholdIno     = 500
 )
 
 // These constants should be in sync with the equivalent definitions in the ebpf program.
 const (
 	stateUninitialized C.__u64 = 0
-	stateChecking              = 1 // status set by userspace, waiting for eBPF
-	stateChecked               = 2 // status set by eBPF, waiting for userspace
-	stateReady                 = 3 // fully initialized, all offset known
+	stateChecking      C.__u64 = 1 // status set by userspace, waiting for eBPF
+	stateChecked       C.__u64 = 2 // status set by eBPF, waiting for userspace
+	stateReady         C.__u64 = 3 // fully initialized, all offset known
 )
 
 var stateString = map[C.__u64]string{
@@ -96,16 +96,16 @@ func checkAndUpdateCurrentOffset(module *bpflib.Module, mp *bpflib.Map, status *
 			if status.err == 0 {
 				status.offset_ino++
 			}
-			if status.err == 1 || status.offset_ino >= threshold_ino {
+			if status.err == 1 || status.offset_ino >= thresholdIno {
 				status.offset_utsns++
 				status.offset_ino = 0
 			}
-			if status.err == 2 || status.offset_utsns >= threshold_utsns {
+			if status.err == 2 || status.offset_utsns >= thresholdUTSNS {
 				status.offset_nsproxy++
 				status.offset_utsns = 0
 				status.offset_ino = 0
 			}
-			if status.offset_ino >= threshold_ino {
+			if status.offset_ino >= thresholdIno {
 				status.offset_ino = 0
 				status.offset_utsns++
 			}
@@ -173,9 +173,9 @@ func guess(m *bpflib.Module) error {
 		// Stop at a reasonable offset so we don't run forever.
 		// Reading too far away in kernel memory is not a big deal:
 		// probe_kernel_read() handles faults gracefully.
-		if status.offset_nsproxy >= threshold_nsproxy ||
-			status.offset_utsns >= threshold_utsns ||
-			status.offset_ino >= threshold_ino {
+		if status.offset_nsproxy >= thresholdNSProxy ||
+			status.offset_utsns >= thresholdUTSNS ||
+			status.offset_ino >= thresholdIno {
 			return fmt.Errorf("overflow while guessing %v, bailing out", whatString[status.what])
 		}
 	}
