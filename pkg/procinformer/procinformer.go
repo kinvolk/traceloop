@@ -13,14 +13,15 @@ import (
 )
 
 type ProcInfo struct {
-	PodUID      string
-	ContainerID string
-	Utsns       uint32
+	Utsns uint32
+
+	PodUID         string
+	ContainerIDSet map[string]struct{}
 }
 
 type ProcInformer struct {
 	// key:   Utsns
-	lookups map[uint32]struct{}
+	lookups map[uint32]ProcInfo
 	mutex   *sync.Mutex
 
 	stopChan         chan struct{}
@@ -29,7 +30,7 @@ type ProcInformer struct {
 
 func NewProcInformer(procInformerChan chan ProcInfo) (*ProcInformer, error) {
 	c := &ProcInformer{
-		lookups: make(map[uint32]struct{}),
+		lookups: make(map[uint32]ProcInfo),
 		mutex:   &sync.Mutex{},
 
 		stopChan:         make(chan struct{}),
@@ -64,7 +65,7 @@ func (p *ProcInformer) update() error {
 		return nil
 	}
 	lookups := p.lookups
-	p.lookups = make(map[uint32]struct{})
+	p.lookups = make(map[uint32]ProcInfo)
 	p.mutex.Unlock()
 
 	procPath := "/proc"
@@ -92,7 +93,8 @@ func (p *ProcInformer) update() error {
 			continue
 		}
 
-		if _, ok := lookups[utsns]; !ok {
+		procInfo, ok := lookups[utsns]
+		if !ok {
 			continue
 		}
 
@@ -102,20 +104,21 @@ func (p *ProcInformer) update() error {
 			continue
 		}
 
-		fmt.Printf("found containerID %s for utsns %d\n", containerID, utsns)
-		delete(lookups, utsns)
-		p.procInformerChan <- ProcInfo{
-			Utsns:       utsns,
-			ContainerID: containerID,
-			PodUID:      podUID,
-		}
+		procInfo.PodUID = podUID
+		procInfo.ContainerIDSet[containerID] = struct{}{}
+
+		lookups[utsns] = procInfo
 	}
-	for utsns := range lookups {
-		p.procInformerChan <- ProcInfo{
-			Utsns:       utsns,
-			ContainerID: "",
-			PodUID:      "",
+
+	for _, procInfo := range lookups {
+		fmt.Printf("Proc informer report for utsns %d: found %d containers for podUID %s:\n", procInfo.Utsns, len(procInfo.ContainerIDSet), procInfo.PodUID)
+		if procInfo.PodUID == "" {
+			continue
 		}
+		for c, _ := range procInfo.ContainerIDSet {
+			fmt.Printf(" - ContainerID %s\n", c)
+		}
+		p.procInformerChan <- procInfo
 	}
 
 	return nil
@@ -124,6 +127,10 @@ func (p *ProcInformer) update() error {
 func (p *ProcInformer) LookupContainerID(utsns uint32) {
 	fmt.Printf("lookup for utsns %d\n", utsns)
 	p.mutex.Lock()
-	p.lookups[utsns] = struct{}{}
+	p.lookups[utsns] = ProcInfo{
+		Utsns:          utsns,
+		PodUID:         "",
+		ContainerIDSet: make(map[string]struct{}),
+	}
 	p.mutex.Unlock()
 }

@@ -81,7 +81,7 @@ type Tracelet struct {
 
 	traceID      string
 	containerID  string
-	uid          string
+	podUID       string
 	namespace    string
 	podname      string
 	containeridx int
@@ -247,18 +247,18 @@ func (sb *StraceBack) updater() (out string) {
 			// therefore, the "ok" value must be checked below.
 			return
 
-		case info, ok := <-sb.podInformerChan:
+		case podInformerInfo, ok := <-sb.podInformerChan:
 			if !ok {
 				return // see explanation above
 			}
 			for i := 0; i < int(C.MaxPooledPrograms); i++ {
-				if sb.tracelets[i] == nil || sb.tracelets[i].containerID != info.ContainerID {
+				if sb.tracelets[i] == nil || sb.tracelets[i].containerID != podInformerInfo.ContainerID {
 					continue
 				}
-				sb.tracelets[i].uid = info.UID
-				sb.tracelets[i].namespace = info.Namespace
-				sb.tracelets[i].podname = info.Podname
-				sb.tracelets[i].containeridx = info.Idx
+				sb.tracelets[i].podUID = podInformerInfo.PodUID
+				sb.tracelets[i].namespace = podInformerInfo.Namespace
+				sb.tracelets[i].podname = podInformerInfo.Podname
+				sb.tracelets[i].containeridx = podInformerInfo.Idx
 
 				if sb.tracelets[i].status != traceletStatusCreated {
 					continue
@@ -281,21 +281,33 @@ func (sb *StraceBack) updater() (out string) {
 		case <-ticker.C:
 			if sb.podInformer != nil {
 				for i := 0; i < int(C.MaxPooledPrograms); i++ {
-					if sb.tracelets[i] == nil || sb.tracelets[i].containerID == "" {
+					if sb.tracelets[i] == nil {
 						continue
 					}
-					var info *podinformer.ContainerInfo
-					var err error
-					if info, err = sb.podInformer.GetPodFromContainerID(sb.tracelets[i].containerID); err != nil {
+					if sb.tracelets[i].containerID == "" && sb.tracelets[i].podUID != "" {
+						// with cri-o, traces can be at the pod level. containerID might not be
+						// set if it has not been verified with the Kubernetes API
+						if sb.tracelets[i].timeCreation.Add(time.Second * 10).After(time.Now()) {
+							sb.procInformer.LookupContainerID(sb.tracelets[i].utsns)
+						}
 						continue
 					}
 
-					if info.UID != "" {
-						sb.tracelets[i].uid = info.UID
+					if sb.tracelets[i].containerID == "" {
+						continue
 					}
-					sb.tracelets[i].namespace = info.Namespace
-					sb.tracelets[i].podname = info.Podname
-					sb.tracelets[i].containeridx = info.Idx
+					var podInformerInfo *podinformer.ContainerInfo
+					var err error
+					if podInformerInfo, err = sb.podInformer.GetPodFromContainerID(sb.tracelets[i].containerID); err != nil {
+						continue
+					}
+
+					if podInformerInfo.PodUID != "" {
+						sb.tracelets[i].podUID = podInformerInfo.PodUID
+					}
+					sb.tracelets[i].namespace = podInformerInfo.Namespace
+					sb.tracelets[i].podname = podInformerInfo.Podname
+					sb.tracelets[i].containeridx = podInformerInfo.Idx
 
 					if sb.tracelets[i].status != traceletStatusCreated {
 						continue
@@ -321,39 +333,55 @@ func (sb *StraceBack) updater() (out string) {
 			}
 			sb.publish()
 
-		case info, ok := <-sb.procInformerChan:
+		case procInformerInfo, ok := <-sb.procInformerChan:
 			if !ok {
 				return // see explanation above
 			}
+
+			fmt.Printf("Received event from proc informer")
+
 			for i := 0; i < int(C.MaxPooledPrograms); i++ {
 				if sb.tracelets[i] == nil || sb.tracelets[i].status != traceletStatusCreated {
 					continue
 				}
-				if sb.tracelets[i].utsns != info.Utsns {
+				if sb.tracelets[i].utsns != procInformerInfo.Utsns {
 					continue
 				}
 
 				// if procInformer signals that it didn't find
 				// this utsns in procfs or it is not a
 				// Kubernetes pod
-				if info.ContainerID == "" {
+				if len(procInformerInfo.ContainerIDSet) == 0 {
 					// TODO: remove prog from the BPF map
 					sb.CloseProg(uint32(i))
 					continue
 				}
 
-				sb.tracelets[i].containerID = info.ContainerID
-				if info.PodUID != "" {
-					sb.tracelets[i].uid = info.PodUID
+				if procInformerInfo.PodUID != "" {
+					sb.tracelets[i].podUID = procInformerInfo.PodUID
 				}
 
-				if info, err := sb.podInformer.GetPodFromContainerID(sb.tracelets[i].containerID); err == nil {
-					if info.UID != "" {
-						sb.tracelets[i].uid = info.UID
+				// Only use verified procInformerInfo.ContainerIDSet to avoid the
+				// infrastructure container.
+				//
+				// When all containers of the pod have their own UTS namespace (e.g. Docker),
+				// there can be only one ContainerID in procInformerInfo.ContainerIDSet.
+				// However, cri-o can be configured to share the UTS namespace among
+				// containers of a pod (manage_ns_lifecycle). In that case,
+				// procInformerInfo.ContainerIDSet can include the infrastructure pod or
+				// other containers of the pod, if they have started.
+				var podInformerInfo *podinformer.ContainerInfo
+				for possibleContainerID := range procInformerInfo.ContainerIDSet {
+					if podInformerInfo2, err := sb.podInformer.GetPodFromContainerID(possibleContainerID); err == nil {
+						podInformerInfo = podInformerInfo2
+						break
 					}
-					sb.tracelets[i].namespace = info.Namespace
-					sb.tracelets[i].podname = info.Podname
-					sb.tracelets[i].containeridx = info.Idx
+				}
+				if podInformerInfo != nil {
+					sb.tracelets[i].containerID = podInformerInfo.ContainerID
+					sb.tracelets[i].namespace = podInformerInfo.Namespace
+					sb.tracelets[i].podname = podInformerInfo.Podname
+					sb.tracelets[i].containeridx = podInformerInfo.Idx
 
 					utsnsMap := sb.mainProg.Map("utsns_map")
 					cStatus := C.struct_container_status_t{
@@ -397,7 +425,7 @@ func (sb *StraceBack) updater() (out string) {
 						}
 					} else if eventC.typ == C.ContainerEventTypeUpdate && containerID != "" {
 						sb.tracelets[eventC.idx].containerID = containerID
-						sb.tracelets[eventC.idx].uid = podUID
+						sb.tracelets[eventC.idx].podUID = podUID
 						sb.tracelets[eventC.idx].status = traceletStatusReady
 					} else if eventC.typ == C.ContainerEventTypeDelete {
 						sb.tracelets[eventC.idx].status = traceletStatusDeleted
@@ -463,7 +491,7 @@ func (sb *StraceBack) publish() {
 		tm := tracemeta.TraceMeta{
 			TraceID:      sb.tracelets[i].traceID,
 			ContainerID:  sb.tracelets[i].containerID,
-			UID:          sb.tracelets[i].uid,
+			PodUID:       sb.tracelets[i].podUID,
 			Namespace:    sb.tracelets[i].namespace,
 			Podname:      sb.tracelets[i].podname,
 			Containeridx: sb.tracelets[i].containeridx,
@@ -522,7 +550,9 @@ func (sb *StraceBack) recycleTracelets() error {
 			continue
 		}
 		if eventTime.Add(timeout).Before(time.Now()) {
-			fmt.Printf("Deleting tracelet #%d\n", i)
+			fmt.Printf("Deleting tracelet #%d (%s/%s) podUID=%q ContainerID=%q\n",
+				i, sb.tracelets[i].namespace, sb.tracelets[i].podname,
+				sb.tracelets[i].podUID, sb.tracelets[i].containerID)
 			sb.CloseProg(uint32(i))
 
 			var err error
@@ -594,9 +624,10 @@ func (sb *StraceBack) List() (out string) {
 				continue
 			}
 
-			info, err := sb.podInformer.GetPodFromContainerID(sb.tracelets[i].containerID)
+			podInformerInfo, err := sb.podInformer.GetPodFromContainerID(sb.tracelets[i].containerID)
 			if err == nil {
-				out += fmt.Sprintf("%d: %s/%s #%d\n", i, info.Namespace, info.Podname, info.Idx)
+				out += fmt.Sprintf("%d: %s/%s #%d\n",
+					i, podInformerInfo.Namespace, podInformerInfo.Podname, podInformerInfo.Idx)
 			} else if sb.tracelets[i].podname != "" {
 				out += fmt.Sprintf("%d: %s/%s #%d (deleted)\n",
 					i,
