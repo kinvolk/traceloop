@@ -74,11 +74,14 @@ tools/golangci-lint: tools/go.mod tools/go.sum
 		go build -o golangci-lint \
 			github.com/golangci/golangci-lint/cmd/golangci-lint
 
-bin-traceloop:
+bin-traceloop: tools/golangci-lint
 	@echo "Building version $(VERSION)"
 	GO111MODULE=on go build \
 		-ldflags $(VERSIONLDFLAGS) \
 		-o traceloop traceloop.go
+	go test -run xxxxxMatchNothingxxxxx ./... >/dev/null # check if tests build properly
+	./tools/golangci-lint run --fix
+	go mod tidy
 
 .PHONY: test
 test:
