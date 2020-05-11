@@ -89,6 +89,7 @@ tools/golangci-lint: tools/go.mod tools/go.sum
 
 bin-traceloop: tools/golangci-lint
 	@echo "Building version $(VERSION)"
+	PATH="$(abspath ./tools):$${PATH}" go generate ./...
 	GO111MODULE=on go build \
 		-ldflags $(VERSIONLDFLAGS) \
 		-o traceloop traceloop.go
