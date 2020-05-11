@@ -6,9 +6,7 @@ package straceback
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -34,33 +32,6 @@ func init() {
 		fmt.Printf("%v\n", err)
 		os.Exit(1)
 	}
-}
-
-const syscallsPath = `/sys/kernel/debug/tracing/events/syscalls/`
-
-// Converts a string to CamelCase
-func toCamel(s string) string {
-	s = strings.Trim(s, " ")
-	n := ""
-	capNext := true
-	for _, v := range s {
-		if v >= 'A' && v <= 'Z' || v >= '0' && v <= '9' {
-			n += string(v)
-		}
-		if v >= 'a' && v <= 'z' {
-			if capNext {
-				n += strings.ToUpper(string(v))
-			} else {
-				n += string(v)
-			}
-		}
-		if v == '_' || v == ' ' {
-			capNext = true
-		} else {
-			capNext = false
-		}
-	}
-	return n
 }
 
 var re = regexp.MustCompile(`\s+field:(?P<type>.*?) (?P<name>[a-z_0-9]+);.*`)
@@ -150,56 +121,6 @@ func relateSyscallName(name string) string {
 	default:
 		return name
 	}
-}
-
-func gatherSyscalls() error {
-	cSyscalls = make(map[string]Syscall)
-	err := filepath.Walk(syscallsPath, func(path string, f os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if path == "syscalls" {
-			return nil
-		}
-
-		if !f.IsDir() {
-			return nil
-		}
-
-		eventName := f.Name()
-		if strings.HasPrefix(eventName, "sys_exit") {
-			return nil
-		}
-
-		syscallName := strings.TrimPrefix(eventName, "sys_enter_")
-		syscallName = relateSyscallName(syscallName)
-
-		formatFilePath := filepath.Join(syscallsPath, eventName, "format")
-		formatFile, err := os.Open(formatFilePath)
-		if err != nil {
-			return nil
-		}
-		defer formatFile.Close()
-
-		formatBytes, err := ioutil.ReadAll(formatFile)
-		if err != nil {
-			return err
-		}
-
-		cSyscall, err := parseSyscall(syscallName, string(formatBytes))
-		if err != nil {
-			return err
-		}
-
-		cSyscalls[cSyscall.Name] = *cSyscall
-
-		return nil
-	})
-	if err != nil {
-		return fmt.Errorf("error walking %q: %v", syscallsPath, err)
-	}
-	return nil
 }
 
 func syscallGetName(nr int) string {
