@@ -233,8 +233,13 @@ static u32 find_prog_idx(void *ctx, u64 pid, u32 utsns, long id, int exit) {
 			// Program already installed. Use it.
 			return status->idx;
 		} else if (status->status == CONTAINER_STATUS_WAITING) {
+			// If runc calls mount() with a path starting with:
+			// /sys/fs/cgroup/systemd/
+			// then send that full path to the traceloop process
+			// so it can extract the PodUID and ContainerID from
+			// the path.
 			if (exit != 0 && id != 165) { // mount
-				return 0xFFFFFFFF;
+				return status->idx;
 			}
 			u64 ts = bpf_ktime_get_ns();
 			struct container_event_t ev = {
@@ -247,7 +252,7 @@ static u32 find_prog_idx(void *ctx, u64 pid, u32 utsns, long id, int exit) {
 			bpf_get_current_comm(ev.comm, sizeof(ev.comm));
 			if (ev.comm[0] != 'r' || ev.comm[1] != 'u' ||
 			    ev.comm[2] != 'n' || ev.comm[3] != 'c') {
-				return 0xFFFFFFFF;
+				return status->idx;
 			}
 			void *param1 = (void *)(((struct sys_enter_args *) ctx)->args[0]);
 			bpf_probe_read(ev.param, 256, param1);
@@ -257,12 +262,12 @@ static u32 find_prog_idx(void *ctx, u64 pid, u32 utsns, long id, int exit) {
 			    ev.param[12] != 'u' || ev.param[13] != 'p' || ev.param[14] != '/' || ev.param[15] != 's' ||
 			    ev.param[16] != 'y' || ev.param[17] != 's' || ev.param[18] != 't' || ev.param[19] != 'e' ||
 			    ev.param[20] != 'm' || ev.param[21] != 'd' || ev.param[22] != '/') {
-				return 0xFFFFFFFF;
+				return status->idx;
 			}
 			bpf_perf_event_output(ctx, &container_events, BPF_F_CURRENT_CPU, &ev, sizeof(ev));
 
 			status->status = CONTAINER_STATUS_READY;
-			return 0xFFFFFFFF;
+			return status->idx;
 		}
 	}
 

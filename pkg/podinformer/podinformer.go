@@ -45,7 +45,7 @@ import (
 )
 
 type ContainerInfo struct {
-	UID         string
+	PodUID      string
 	Namespace   string
 	Podname     string
 	Idx         int
@@ -146,7 +146,7 @@ func (p *PodInformer) GetPodFromContainerID(containerID string) (info *Container
 		for i, cid := range cids {
 			if cid == containerID {
 				return &ContainerInfo{
-					UID:         "",
+					PodUID:      "",
 					Namespace:   ns,
 					Podname:     n,
 					Idx:         i,
@@ -211,7 +211,7 @@ func (p *PodInformer) syncToStdout(key string) error {
 			p.containerIDsByKey[key] = append(p.containerIDsByKey[key], s.ContainerID)
 
 			p.podInformerChan <- ContainerInfo{
-				UID:         string(obj.(*v1.Pod).GetUID()),
+				PodUID:      string(obj.(*v1.Pod).GetUID()),
 				Namespace:   obj.(*v1.Pod).GetNamespace(),
 				Podname:     obj.(*v1.Pod).GetName(),
 				Idx:         i,
