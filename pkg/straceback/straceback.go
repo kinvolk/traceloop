@@ -354,7 +354,8 @@ func (sb *StraceBack) updater() (out string) {
 				// Kubernetes pod
 				if len(procInformerInfo.ContainerIDSet) == 0 {
 					// TODO: remove prog from the BPF map
-					sb.CloseProg(uint32(i))
+					// TODO: should we ignore this error?
+					_ = sb.CloseProg(uint32(i))
 					continue
 				}
 
@@ -555,7 +556,8 @@ func (sb *StraceBack) recycleTracelets() error {
 			fmt.Printf("Deleting tracelet #%d (%s/%s) podUID=%q ContainerID=%q\n",
 				i, sb.tracelets[i].namespace, sb.tracelets[i].podname,
 				sb.tracelets[i].podUID, sb.tracelets[i].containerID)
-			sb.CloseProg(uint32(i))
+			// TODO: should we ignore this error
+			_ = sb.CloseProg(uint32(i))
 
 			var err error
 			sb.tracelets[i], err = getDummyTracelet(sb.mainProg, sb.tailCallEnter, sb.tailCallExit, sb.tailCallCaps, uint32(i))
@@ -909,7 +911,9 @@ func (sb *StraceBack) DumpPod(namespace, podname string, containerIndex int) (ou
 }
 
 func (sb *StraceBack) CloseProg(id uint32) (err error) {
-	sb.tracelets[id].tailCallProg.Close()
+	// TODO: should we return this error? Otherwise the error
+	// return value is pointless.
+	_ = sb.tracelets[id].tailCallProg.Close()
 	sb.tracelets[id] = nil
 	return
 }
