@@ -18,6 +18,9 @@ import (
 	"github.com/kinvolk/traceloop/pkg/tracemeta"
 )
 
+//go:generate get_syscall_params.sh syscall_params.go
+//go:generate get_syscall_table.sh syscall_table.go
+
 /*
 #include "../../bpf/straceback-guess-bpf.h"
 #include "../../bpf/straceback-tailcall-caps.h"
