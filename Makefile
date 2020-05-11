@@ -30,6 +30,19 @@ SUDO=$(shell docker info >/dev/null 2>&1 || echo "sudo -E")
 .PHONY: all
 all: build-docker-image build-bpf-object install-generated-go bin-traceloop test docker/image
 
+.PHONY: ci
+ci: all check-clean-tree
+
+.PHONY: check-clean-tree
+check-clean-tree:
+	@if ! git diff --quiet; then \
+	  echo; \
+	  echo 'Working tree is not clean, did you forget to run "make" locally?'; \
+	  echo; \
+	  git status; \
+	  exit 1; \
+	fi
+
 build-docker-image:
 	$(SUDO) docker build -t $(BUILDER_DOCKER_IMAGE) -f $(BUILDER_DOCKER_FILE) .
 

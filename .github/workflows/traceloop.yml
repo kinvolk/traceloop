@@ -22,7 +22,7 @@ jobs:
 
     - name: Build traceloop
       run: |
-        make all
+        make ci
 
     - name: Build container and publish to Registry
       id: publish-registry
