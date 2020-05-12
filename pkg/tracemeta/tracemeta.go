@@ -11,4 +11,5 @@ type TraceMeta struct {
 	TimeCreation string `json:"timecreation,omitempty"`
 	TimeDeletion string `json:"timedeletion,omitempty"`
 	Capabilities uint64 `json:"capabilities,omitempty"`
+	Node         string `json:"node,omitempty"`
 }

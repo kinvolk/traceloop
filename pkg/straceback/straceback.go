@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 	"unsafe"
@@ -496,6 +497,7 @@ func (sb *StraceBack) publish() {
 			Podname:      sb.tracelets[i].podname,
 			Containeridx: sb.tracelets[i].containeridx,
 			Capabilities: caps,
+			Node:         os.Getenv("TRACELOOP_NODE_NAME"),
 		}
 		if !sb.tracelets[i].timeCreation.IsZero() {
 			tm.TimeCreation = sb.tracelets[i].timeCreation.Format(time.RFC3339)
