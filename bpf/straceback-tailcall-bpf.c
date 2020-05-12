@@ -192,7 +192,7 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 			// https://github.com/torvalds/linux/commit/9fd29c08e52023252f0480ab8f6906a1ecc9a8d5
 			switch (arg_len) {
 			case 0:
-				sc_cont.failed = true;
+				// Nothing to do
 				break;
 #define UNROLL_CASE(len) \
 			case (len): \
@@ -307,7 +307,7 @@ int tracepoint__sys_exit(struct sys_exit_args *ctx)
 				// I know arg_len is not a volatile but that stops the compiler from
 				// optimising the ifs into one bpf_probe_read call with a variable size.
 				if (arg_len == 0) {
-					sc_cont.failed = true;
+					// Nothing to do
 				}
 #define UNROLL_TEST(len) \
 				else if ((volatile __u64)arg_len == (len)) { \
