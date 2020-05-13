@@ -30,6 +30,19 @@ SUDO=$(shell docker info >/dev/null 2>&1 || echo "sudo -E")
 .PHONY: all
 all: build-docker-image build-bpf-object install-generated-go bin-traceloop test docker/image
 
+.PHONY: ci
+ci: all check-clean-tree
+
+.PHONY: check-clean-tree
+check-clean-tree:
+	@if ! git diff --quiet; then \
+	  echo; \
+	  echo 'Working tree is not clean, did you forget to run "make" locally?'; \
+	  echo; \
+	  git status; \
+	  exit 1; \
+	fi
+
 build-docker-image:
 	$(SUDO) docker build -t $(BUILDER_DOCKER_IMAGE) -f $(BUILDER_DOCKER_FILE) .
 
@@ -74,11 +87,14 @@ tools/golangci-lint: tools/go.mod tools/go.sum
 		go build -o golangci-lint \
 			github.com/golangci/golangci-lint/cmd/golangci-lint
 
-bin-traceloop:
+bin-traceloop: tools/golangci-lint
 	@echo "Building version $(VERSION)"
 	GO111MODULE=on go build \
 		-ldflags $(VERSIONLDFLAGS) \
 		-o traceloop traceloop.go
+	go test -run xxxxxMatchNothingxxxxx ./... >/dev/null # check if tests build properly
+	./tools/golangci-lint run --fix
+	go mod tidy
 
 .PHONY: test
 test:

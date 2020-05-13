@@ -103,7 +103,9 @@ func main() {
 		signal.Notify(sig, os.Interrupt)
 		<-sig
 		fmt.Printf("Interrupted!\n")
-		t.DumpAll()
+		// TODO: DumpAll does not really do anything with its
+		// return values - it should just return nothing
+		_, _ = t.DumpAll()
 		os.Exit(0)
 	}
 
@@ -241,7 +243,10 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		server.Serve(unixListener)
+		// TODO: this never returns, because we never close
+		// nor shutdown the server? Should we do
+		// `os.Exit(something)` after serve?
+		_ = server.Serve(unixListener)
 	}
 
 	var ids []uint32

@@ -71,7 +71,9 @@ func ownUtsNS() (uint64, error) {
 }
 
 func tryCurrentOffset(module *bpflib.Module, mp *bpflib.Map, status *guessStatus, expected *fieldValues) error {
-	syscall.Access("/", 0)
+	// TODO: This function seems to be not implemented at all. The
+	// access syscall looks completely bogus here.
+	_ = syscall.Access("/", 0)
 	return nil
 }
 
