@@ -134,16 +134,18 @@ static int are_offsets_ready(struct guess_status_t *status, struct task_struct *
 	if (status->pid_tgid != pid)
 		return 0;
 
+#ifdef DEBUG_OFFSETS
 	printt("offset task - thread_group: %d\n", offsetof(struct task_struct, thread_group));
 	printt("offset task - ptraced: %d\n", offsetof(struct task_struct, ptraced));
 	printt("offset task - clear_child_tid: %d\n", offsetof(struct task_struct, clear_child_tid));
 	printt("offset task - vtime: %d\n", offsetof(struct task_struct, vtime));
 	printt("offset task - ptracer_cred: %d\n", offsetof(struct task_struct, ptracer_cred));
 	printt("offset task - nsproxy: %d\n", offsetof(struct task_struct, nsproxy));
-	//printt("offset_nsproxy: %d\n", offsetof(struct task_struct, nsproxy));
-	//printt("offset_utsns: %d\n", offsetof(struct nsproxy, uts_ns));
-	//printt("offset_ino: %d\n", offsetof(struct uts_namespace, ns));
-	//printt("offset_ino: %d\n", offsetof(struct ns_common, inum));
+	printt("offset_nsproxy: %d\n", offsetof(struct task_struct, nsproxy));
+	printt("offset_utsns: %d\n", offsetof(struct nsproxy, uts_ns));
+	printt("offset_ino: %d\n", offsetof(struct uts_namespace, ns));
+	printt("offset_ino: %d\n", offsetof(struct ns_common, inum));
+#endif
 
 	struct guess_status_t new_status = { };
 	new_status.state = GUESS_STATE_CHECKED;
