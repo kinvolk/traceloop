@@ -28,6 +28,7 @@ package podinformer
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -81,7 +82,11 @@ func NewPodInformer(podInformerChan chan ContainerInfo) (*PodInformer, error) {
 	}
 
 	// create the pod watcher
-	podListWatcher := cache.NewListWatchFromClient(clientset.CoreV1().RESTClient(), "pods", "", fields.Everything())
+	node := os.Getenv("TRACELOOP_NODE_NAME")
+	if node == "" {
+		return nil, fmt.Errorf("Environment variable TRACELOOP_NODE_NAME not set")
+	}
+	podListWatcher := cache.NewListWatchFromClient(clientset.CoreV1().RESTClient(), "pods", "", fields.OneTermEqualSelector("spec.nodeName", node))
 
 	// creates the queue
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
