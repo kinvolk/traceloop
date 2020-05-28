@@ -8,6 +8,7 @@ import (
 	"unsafe"
 
 	bpflib "github.com/iovisor/gobpf/elf"
+	log "github.com/sirupsen/logrus"
 )
 
 /*
@@ -136,7 +137,11 @@ func guess(m *bpflib.Module) error {
 	defer runtime.UnlockOSThread()
 
 	pidTgid := uint64(os.Getpid())<<32 | uint64(syscall.Gettid())
-	fmt.Printf("pid %v tid %v\n", os.Getpid(), syscall.Gettid())
+	log.WithFields(log.Fields{
+		"own-pid":   os.Getpid(),
+		"own-tid":   syscall.Gettid(),
+		"own-utsns": currentUtsns,
+	}).Trace("Guess offsets")
 
 	status := &guessStatus{
 		state:          stateChecking,
@@ -160,8 +165,6 @@ func guess(m *bpflib.Module) error {
 	}
 
 	for status.state != stateReady {
-		//fmt.Printf("Trying %+v expected %+v\n", status, expected)
-
 		if err := tryCurrentOffset(m, mp, status, expected); err != nil {
 			return err
 		}
@@ -185,7 +188,11 @@ func guess(m *bpflib.Module) error {
 		OffsetNsproxy = uint64(status.offset_nsproxy)
 		OffsetUtsns = uint64(status.offset_utsns)
 		OffsetIno = uint64(status.offset_ino)
-		fmt.Printf("offsets: %v %v %v\n", OffsetNsproxy, OffsetUtsns, OffsetIno)
+		log.WithFields(log.Fields{
+			"OffsetNsproxy": OffsetNsproxy,
+			"OffsetUtsns":   OffsetUtsns,
+			"OffsetIno":     OffsetIno,
+		}).Debug("Guess: offsets found")
 	}
 
 	return nil

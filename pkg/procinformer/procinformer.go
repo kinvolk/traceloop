@@ -1,13 +1,14 @@
 package procinformer
 
 import (
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"strconv"
 	"sync"
 	"syscall"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/kinvolk/traceloop/pkg/podcgroup"
 )
@@ -48,7 +49,10 @@ func NewProcInformer(procInformerChan chan ProcInfo) (*ProcInformer, error) {
 			case <-ticker.C:
 				err := c.update()
 				if err != nil {
-					fmt.Printf("%s\n", err)
+					log.WithFields(log.Fields{
+						"err": err,
+					}).Error("Proc informer error")
+
 					return
 				}
 			}
@@ -111,12 +115,18 @@ func (p *ProcInformer) update() error {
 	}
 
 	for _, procInfo := range lookups {
-		fmt.Printf("Proc informer report for utsns %d: found %d containers for podUID %s:\n", procInfo.Utsns, len(procInfo.ContainerIDSet), procInfo.PodUID)
+		log.WithFields(log.Fields{
+			"utsns":          procInfo.Utsns,
+			"containerCount": len(procInfo.ContainerIDSet),
+			"poduid":         procInfo.PodUID,
+		}).Debug("Proc informer report")
 		if procInfo.PodUID == "" {
 			continue
 		}
 		for c := range procInfo.ContainerIDSet {
-			fmt.Printf(" - ContainerID %s\n", c)
+			log.WithFields(log.Fields{
+				"containerID": c,
+			}).Debug("Proc informer report detail")
 		}
 		p.procInformerChan <- procInfo
 	}
@@ -125,7 +135,10 @@ func (p *ProcInformer) update() error {
 }
 
 func (p *ProcInformer) LookupContainerID(utsns uint32) {
-	fmt.Printf("lookup for utsns %d\n", utsns)
+	log.WithFields(log.Fields{
+		"utsns": utsns,
+	}).Debug("Proc informer lookup for utsns")
+
 	p.mutex.Lock()
 	p.lookups[utsns] = ProcInfo{
 		Utsns:          utsns,

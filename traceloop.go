@@ -8,7 +8,10 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	"github.com/kinvolk/traceloop/pkg/straceback"
 )
@@ -18,77 +21,103 @@ var (
 	withPidNS  bool
 	dumpOnExit bool
 	paths      []string
+
+	logflags string
 )
 
 // This variable is set during build.
 var version = "undefined"
 
 func main() {
-	fmt.Printf("traceloop version %v\n", version)
-	usage := func() {
-		fmt.Printf("Usage:\n%s <k8s>|<guess>|<serve>|<cgroups [--dump-on-exit] CGROUPS...>\n", os.Args[0])
-		fmt.Printf("  guess:                   Look for newly created Docker containers.\n")
-		fmt.Printf("  k8s:                     Look for newly created Docker containers and start daemon with HTTP API on /run/traceloop.socket.\n")
-		fmt.Printf("  serve:                   Start daemon with HTTP API on /run/traceloop.socket.\n")
-		fmt.Printf("  cgroups CGROUPS...:      One or more arguments to specify the CGroup path(s) to attach to.\n")
-		fmt.Printf("                           The ring buffer contents are continuously dumped.\n")
-		fmt.Printf("                           The optional flag --dump-on-exit disables interactive usage\n")
-		fmt.Printf("                           so that the dump is only done when the traceloop process is terminated.\n")
+	flag.StringVar(&logflags, "log", "info", "log level [trace,debug,info,warn,error,fatal,color,nocolor,json]")
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s:\n", os.Args[0])
+		fmt.Fprintf(flag.CommandLine.Output(), "%s [OPTIONS] <k8s>|<guess>|<serve>|<cgroups [--dump-on-exit] CGROUPS...>\n", os.Args[0])
+		fmt.Fprintf(flag.CommandLine.Output(), "  guess:                   Look for newly created Docker containers.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  k8s:                     Look for newly created Docker containers and start daemon with HTTP API on /run/traceloop.socket.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  serve:                   Start daemon with HTTP API on /run/traceloop.socket.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "  cgroups CGROUPS...:      One or more arguments to specify the CGroup path(s) to attach to.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "                           The ring buffer contents are continuously dumped.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "                           The optional flag --dump-on-exit disables interactive usage\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "                           so that the dump is only done when the traceloop process is terminated.\n")
+		fmt.Fprintf(flag.CommandLine.Output(), "\n")
+
+		flag.PrintDefaults()
+
 	}
+	flag.Parse()
+
+	for _, v := range strings.Split(logflags, ",") {
+		if v == "json" {
+			log.SetFormatter(&log.JSONFormatter{})
+		} else if v == "color" {
+			log.SetFormatter(&log.TextFormatter{ForceColors: true})
+		} else if v == "nocolor" {
+			log.SetFormatter(&log.TextFormatter{DisableColors: true})
+		} else if lvl, err := log.ParseLevel(v); err == nil {
+			log.SetLevel(lvl)
+		} else {
+			fmt.Fprintf(os.Stderr, "Invalid log level: %s\n", err.Error())
+			flag.Usage()
+			os.Exit(1)
+		}
+	}
+
+	fmt.Printf("traceloop version %v\n", version)
 	guessCmd := flag.NewFlagSet("guess", flag.ExitOnError)
-	guessCmd.Usage = usage
+	guessCmd.Usage = flag.Usage
 	k8sCmd := flag.NewFlagSet("k8s", flag.ExitOnError)
-	k8sCmd.Usage = usage
+	k8sCmd.Usage = flag.Usage
 	serveCmd := flag.NewFlagSet("serve", flag.ExitOnError)
-	serveCmd.Usage = usage
+	serveCmd.Usage = flag.Usage
 	cgroupsCmd := flag.NewFlagSet("cgroups", flag.ExitOnError)
 	dumpOnExitEnable := cgroupsCmd.Bool("dump-on-exit", false, "dump-on-exit")
-	cgroupsCmd.Usage = usage
-	if len(os.Args) == 1 || os.Args[1] == "-h" || os.Args[1] == "--help" || os.Args[1] == "help" {
-		usage()
+	cgroupsCmd.Usage = flag.Usage
+	if len(flag.Args()) == 0 || flag.Arg(0) == "-h" || flag.Arg(0) == "--help" || flag.Arg(0) == "help" {
+		flag.Usage()
 		os.Exit(0)
 	}
-	switch os.Args[1] {
+	switch flag.Arg(0) {
 	case "guess":
-		_ = guessCmd.Parse(os.Args[2:])
+		_ = guessCmd.Parse(flag.Args()[1:])
 		withPidNS = true
 		args := guessCmd.Args()
 		if len(args) > 0 {
 			fmt.Fprintf(os.Stderr, "Unexpected additional arguments: %q.\n", args)
-			usage()
+			flag.Usage()
 			os.Exit(1)
 		}
 	case "k8s":
-		_ = k8sCmd.Parse(os.Args[2:])
+		_ = k8sCmd.Parse(flag.Args()[1:])
 		withPidNS = true
 		serveHTTP = true
 		args := k8sCmd.Args()
 		if len(args) > 0 {
 			fmt.Fprintf(os.Stderr, "Unexpected additional arguments: %q.\n", args)
-			usage()
+			flag.Usage()
 			os.Exit(1)
 		}
 	case "serve":
-		_ = serveCmd.Parse(os.Args[2:])
+		_ = serveCmd.Parse(flag.Args()[1:])
 		serveHTTP = true
 		args := serveCmd.Args()
 		if len(args) > 0 {
 			fmt.Fprintf(os.Stderr, "Unexpected additional arguments: %q.\n", args)
-			usage()
+			flag.Usage()
 			os.Exit(1)
 		}
 	case "cgroups":
-		_ = cgroupsCmd.Parse(os.Args[2:])
+		_ = cgroupsCmd.Parse(flag.Args()[1:])
 		dumpOnExit = *dumpOnExitEnable
 		paths = cgroupsCmd.Args()
 		if len(paths) == 0 {
 			fmt.Fprintf(os.Stderr, "No cgroup paths specified.\n")
-			usage()
+			flag.Usage()
 			os.Exit(1)
 		}
 	default:
-		fmt.Fprintf(os.Stderr, "Unknown argument %q.\n", os.Args[1])
-		usage()
+		fmt.Fprintf(os.Stderr, "Unknown argument %q.\n", flag.Arg(0))
+		flag.Usage()
 		os.Exit(1)
 	}
 

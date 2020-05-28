@@ -10,6 +10,7 @@ import (
 	"unsafe"
 
 	bpflib "github.com/iovisor/gobpf/elf"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/kinvolk/traceloop/pkg/annotationpublisher"
 	"github.com/kinvolk/traceloop/pkg/podcgroup"
@@ -121,6 +122,12 @@ func NewTracer(withPodDiscovery bool, withProcInformer bool, withAnnotationPubli
 	if withPodDiscovery {
 		obj = "straceback-guess-bpf.o"
 	}
+	log.WithFields(log.Fields{
+		"obj":                  obj,
+		"pod-discovery":        withPodDiscovery,
+		"proc-informer":        withProcInformer,
+		"annotation-publisher": withAnnotationPublisher,
+	}).Debug("Starting new tracer")
 
 	buf, err := Asset(obj)
 	if err != nil {
@@ -172,6 +179,7 @@ func NewTracer(withPodDiscovery bool, withProcInformer bool, withAnnotationPubli
 
 	if withPodDiscovery {
 		// start pod informer
+		log.Info("Starting pod informer")
 		sb.podInformer, _ = podinformer.NewPodInformer(sb.podInformerChan)
 
 		// init tracelet pool
@@ -222,21 +230,26 @@ func NewTracer(withPodDiscovery bool, withProcInformer bool, withAnnotationPubli
 			return nil, err
 		}
 	}
+	log.Info("BPF Tracer ready")
 
 	if withProcInformer {
+		log.Info("Starting proc informer")
 		sb.procInformer, _ = procinformer.NewProcInformer(sb.procInformerChan)
 	}
 
 	if withAnnotationPublisher {
+		log.Info("Starting annotation publisher")
 		sb.annotationPublisher, _ = annotationpublisher.NewAnnotationPublisher()
 	}
 
+	log.Info("Starting updater loop")
 	go sb.updater()
 
 	return sb, nil
 }
 
 func (sb *StraceBack) updater() (out string) {
+	defer log.Info("Stopping updater loop")
 	ticker := time.NewTicker(1000 * time.Millisecond)
 	defer ticker.Stop()
 
@@ -271,9 +284,14 @@ func (sb *StraceBack) updater() (out string) {
 					status: C.ContainerStatusReady,
 				}
 				utsns := uint32(sb.tracelets[i].utsns)
-				fmt.Printf("Debug: updating map utsnsMap for %v\n", utsns)
+				log.WithFields(log.Fields{
+					"utsns": utsns,
+				}).Debug("Updating utsns map")
 				if err := sb.mainProg.UpdateElement(utsnsMap, unsafe.Pointer(&utsns), unsafe.Pointer(&cStatus), 0); err != nil {
-					fmt.Printf("error updating utsns map: %v", err)
+					log.WithFields(log.Fields{
+						"utsns": utsns,
+						"err":   err,
+					}).Error("Error updating utsns map from pod informer event")
 					return
 				}
 				sb.tracelets[i].status = traceletStatusReady
@@ -321,14 +339,19 @@ func (sb *StraceBack) updater() (out string) {
 					}
 					cUtsns := uint32(sb.tracelets[i].utsns)
 					if err := sb.mainProg.UpdateElement(utsnsMap, unsafe.Pointer(&cUtsns), unsafe.Pointer(&cStatus), 0); err != nil {
-						fmt.Printf("error updating utsns map: %v", err)
+						log.WithFields(log.Fields{
+							"utsns": cUtsns,
+							"err":   err,
+						}).Error("Error updating utsns map from ticker")
 						return
 					}
 					sb.tracelets[i].status = traceletStatusReady
 				}
 
 				if err := sb.recycleTracelets(); err != nil {
-					fmt.Printf("error recycling tracelets: %v", err)
+					log.WithFields(log.Fields{
+						"err": err,
+					}).Error("Error recycling tracelets")
 					return
 				}
 			}
@@ -339,7 +362,10 @@ func (sb *StraceBack) updater() (out string) {
 				return // see explanation above
 			}
 
-			fmt.Printf("Received event from proc informer")
+			log.WithFields(log.Fields{
+				"utsns":  procInformerInfo.Utsns,
+				"poduid": procInformerInfo.PodUID,
+			}).Debug("Received event from proc informer")
 
 			for i := 0; i < int(C.MaxPooledPrograms); i++ {
 				if sb.tracelets[i] == nil || sb.tracelets[i].status != traceletStatusCreated {
@@ -391,7 +417,10 @@ func (sb *StraceBack) updater() (out string) {
 					}
 					cUtsns := uint32(sb.tracelets[i].utsns)
 					if err := sb.mainProg.UpdateElement(utsnsMap, unsafe.Pointer(&cUtsns), unsafe.Pointer(&cStatus), 0); err != nil {
-						fmt.Printf("error updating utsns map: %v", err)
+						log.WithFields(log.Fields{
+							"utsns": cUtsns,
+							"err":   err,
+						}).Error("Error updating utsns map from proc informer event")
 						return
 					}
 					sb.tracelets[i].status = traceletStatusReady
@@ -406,10 +435,17 @@ func (sb *StraceBack) updater() (out string) {
 
 			podUID, containerID := podcgroup.ExtractIDFromCgroupPath(C.GoString(&eventC.param[0]))
 
-			fmt.Printf("New container event: type %d: utsns %v assigned to slot %d (%q, pid: %v, tid: %v)\n",
-				eventC.typ, eventC.utsns, eventC.idx, C.GoString(&eventC.comm[0]),
-				eventC.pid>>32, eventC.pid&0xFFFFFFFF)
-			fmt.Printf("    %s %s (%s)\n", containerID, podUID, C.GoString(&eventC.param[0]))
+			log.WithFields(log.Fields{
+				"type":        eventC.typ,
+				"utsns":       eventC.utsns,
+				"slot":        eventC.idx,
+				"comm":        C.GoString(&eventC.comm[0]),
+				"pid":         eventC.pid >> 32,
+				"tid":         eventC.pid & 0xFFFFFFFF,
+				"param0":      C.GoString(&eventC.param[0]),
+				"poduid":      podUID,
+				"containerID": containerID,
+			}).Debug("Received container event from BPF program")
 
 			if eventC.idx < C.uint(C.MaxPooledPrograms) && sb.tracelets[eventC.idx] != nil {
 				sb.tracelets[eventC.idx].traceID = fmt.Sprintf("%016x", uint64(eventC.timestamp))
@@ -439,7 +475,9 @@ func (sb *StraceBack) updater() (out string) {
 			if !ok {
 				return // see explanation above
 			}
-			fmt.Printf("Lost data in the newContainerEventsMap: %v\n", lost)
+			log.WithFields(log.Fields{
+				"lost": lost,
+			}).Error("Lost data in the newContainerEventsMap")
 		}
 	}
 }
@@ -460,10 +498,18 @@ func (sb *StraceBack) getCapsRecords(i int) error {
 		}
 
 		key = nextKey
-		fmt.Printf("Tracelet #%d: found:%v - key:%+v (%s %s) value:%v [%s]\n", i, f, key, syscallGetName(int(key.syscall_id)), capDecode(uint64(key.caps)), value, C.GoString(&value.comm[0]))
+		log.WithFields(log.Fields{
+			"idx":     i,
+			"found":   f,
+			"key":     key,
+			"syscall": syscallGetName(int(key.syscall_id)),
+			"caps":    capDecode(uint64(key.caps)),
+			"value":   value,
+			"comm":    C.GoString(&value.comm[0]),
+		}).Trace("Get capability from tracelet")
 
 		if value.pid == 0 {
-			fmt.Printf("error: pid is 0\n")
+			log.Error("Get capability from tracelet: pid is 0")
 			break
 		}
 	}
@@ -509,20 +555,29 @@ func (sb *StraceBack) publish() {
 		ts = append(ts, tm)
 
 		if err := sb.getCapsRecords(i); err != nil {
-			fmt.Printf("Cannot get caps records: %v\n", err)
+			log.WithFields(log.Fields{
+				"err": err,
+			}).Error("Cannot get caps records")
 		}
 	}
 
-	fmt.Printf("Publishing %d traces\n", len(ts))
+	log.WithFields(log.Fields{
+		"count": len(ts),
+	}).Trace("Publishing traces")
 
 	out, err := json.Marshal(ts)
 	if err != nil {
-		fmt.Printf("Error marshaling traces: %v\n", err)
+		log.WithFields(log.Fields{
+			"err": err,
+		}).Error("Error marshaling traces")
 		return
 	}
 
 	if err := sb.annotationPublisher.Publish(string(out)); err != nil {
-		fmt.Printf("Cannot publish annotation: %v\n%s\n", err, string(out))
+		log.WithFields(log.Fields{
+			"err": err,
+			"out": string(out),
+		}).Error("Cannot publish annotation")
 	}
 }
 
@@ -552,9 +607,13 @@ func (sb *StraceBack) recycleTracelets() error {
 			continue
 		}
 		if eventTime.Add(timeout).Before(time.Now()) {
-			fmt.Printf("Deleting tracelet #%d (%s/%s) podUID=%q ContainerID=%q\n",
-				i, sb.tracelets[i].namespace, sb.tracelets[i].podname,
-				sb.tracelets[i].podUID, sb.tracelets[i].containerID)
+			log.WithFields(log.Fields{
+				"idx":         i,
+				"namespace":   sb.tracelets[i].namespace,
+				"podname":     sb.tracelets[i].podname,
+				"poduid":      sb.tracelets[i].podUID,
+				"containerID": sb.tracelets[i].containerID,
+			}).Info("Deleting tracelet")
 			sb.CloseProg(uint32(i))
 
 			var err error
@@ -580,7 +639,9 @@ func (sb *StraceBack) recycleTracelets() error {
 		return fmt.Errorf("error looking up queue of BPF programs: %v", err)
 	}
 
-	fmt.Printf("Current queue is %v\n", queue.indexes)
+	log.WithFields(log.Fields{
+		"queue": queue.indexes,
+	}).Debug("Recycling tracelets")
 
 	updated := false
 	for i := 0; i < int(C.MaxPooledPrograms); i++ {
@@ -590,7 +651,10 @@ func (sb *StraceBack) recycleTracelets() error {
 		if len(newIndexes) == 0 {
 			break
 		}
-		fmt.Printf("Adding tracelet #%d in queue at %d\n", newIndexes[0], i)
+		log.WithFields(log.Fields{
+			"idx": newIndexes[0],
+			"i":   i,
+		}).Debug("Adding tracelet in queue")
 		updated = true
 		queue.indexes[i] = C.uint(newIndexes[0])
 		if len(newIndexes) > 1 {
@@ -600,11 +664,13 @@ func (sb *StraceBack) recycleTracelets() error {
 		}
 	}
 	if len(newIndexes) != 0 {
-		fmt.Printf("Error: too many new tracelets\n")
+		log.Error("Too many new tracelets")
 	}
 
 	if updated {
-		fmt.Printf("Update queue to %v\n", queue.indexes)
+		log.WithFields(log.Fields{
+			"queue": queue.indexes,
+		}).Debug("Update queue")
 		if err := sb.mainProg.UpdateElement(queueAvailProgs, unsafe.Pointer(&zero), unsafe.Pointer(&queue), 0); err != nil {
 			return fmt.Errorf("error updating queue of BPF programs: %v", err)
 		}

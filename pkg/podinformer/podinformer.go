@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"time"
 
+	log "github.com/sirupsen/logrus"
 	"k8s.io/klog"
 
 	v1 "k8s.io/api/core/v1"
@@ -193,20 +194,25 @@ func (p *PodInformer) syncToStdout(key string) error {
 
 	if !exists {
 		// Below we will warm up our cache with a Pod, so that we will see a delete for one pod
-		fmt.Printf("Pod %s does not exist anymore\n", key)
+		log.WithFields(log.Fields{
+			"podkey": key,
+		}).Debug("Pod does not exist anymore")
 		delete(p.containerIDsByKey, key)
 		// TODO podInformerChan
 	} else {
 		// Note that you also have to check the uid if you have a local controlled resource, which
 		// is dependent on the actual instance, to detect that a Pod was recreated with the same name
-		fmt.Printf("Sync/Add/Update for Pod %s %s:\n",
-			obj.(*v1.Pod).GetNamespace(), obj.(*v1.Pod).GetName())
 		p.containerIDsByKey[key] = nil
 		for i, s := range obj.(*v1.Pod).Status.ContainerStatuses {
 			if s.ContainerID == "" {
 				continue
 			}
-			fmt.Printf("    %s\n", s.ContainerID)
+			log.WithFields(log.Fields{
+				"podkey":      key,
+				"namespace":   obj.(*v1.Pod).GetNamespace(),
+				"podname":     obj.(*v1.Pod).GetName(),
+				"containerid": s.ContainerID,
+			}).Debug("Sync/Add/Update for container")
 
 			p.containerIDsByKey[key] = append(p.containerIDsByKey[key], s.ContainerID)
 
