@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Param struct {
@@ -31,8 +33,7 @@ var (
 func init() {
 	err := gatherSyscallsStatic()
 	if err != nil {
-		fmt.Printf("%v\n", err)
-		os.Exit(1)
+		log.Fatal(err.Error())
 	}
 }
 
