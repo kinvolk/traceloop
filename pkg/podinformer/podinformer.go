@@ -30,6 +30,7 @@ import (
 	"fmt"
 	"os"
 	"time"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/klog"
@@ -212,21 +213,34 @@ func (p *PodInformer) syncToStdout(key string) error {
 			if s.ContainerID == "" {
 				continue
 			}
+
+			var containerID string
+			containerIDSplit := strings.Split(s.ContainerID, "://")
+			if len(containerIDSplit) == 1 {
+				containerID = containerIDSplit[0]
+			} else if len(containerIDSplit) == 2 {
+				containerID = containerIDSplit[1]
+			} else {
+				log.WithFields(log.Fields{
+					"containerid": s.ContainerID,
+				}).Error("Unrecognised containerID")
+				continue
+			}
 			log.WithFields(log.Fields{
 				"podkey":      key,
 				"namespace":   obj.(*v1.Pod).GetNamespace(),
 				"podname":     obj.(*v1.Pod).GetName(),
-				"containerid": s.ContainerID,
+				"containerid": containerID,
 			}).Debug("Sync/Add/Update for container")
 
-			p.containerIDsByKey[key] = append(p.containerIDsByKey[key], s.ContainerID)
+			p.containerIDsByKey[key] = append(p.containerIDsByKey[key], containerID)
 
 			p.podInformerChan <- ContainerInfo{
 				PodUID:      string(obj.(*v1.Pod).GetUID()),
 				Namespace:   obj.(*v1.Pod).GetNamespace(),
 				Podname:     obj.(*v1.Pod).GetName(),
 				Idx:         i,
-				ContainerID: s.ContainerID,
+				ContainerID: containerID,
 				Deleted:     false,
 			}
 		}
