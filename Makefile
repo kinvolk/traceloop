@@ -49,7 +49,7 @@ ifeq ($(CIRCLECI),true)
 	docker create -v /src -v /dist --name sources alpine:3.4 /bin/true
 	docker cp . sources:/src
 endif
-	$(SUDO) docker run -e DEBUG=$(DEBUG) \
+	$(SUDO) docker run --user $(UID) -e DEBUG=$(DEBUG) \
 		-e CIRCLE_BUILD_URL=$(CIRCLE_BUILD_URL) \
 		$(DOCKER_VOLUMES) \
 		--workdir=/src \
@@ -59,8 +59,6 @@ ifeq ($(CIRCLECI),true)
 	docker cp bpfbuild:/dist/straceback-assets-bpf.go bpf/straceback-assets-bpf.go
 	docker container rm bpfbuild
 	docker container rm sources
-else
-	sudo chown -R $(UID):$(UID) bpf
 endif
 
 install-generated-go:
