@@ -12,7 +12,7 @@ endif
 VERSIONLDFLAGS := "-X main.version=$(VERSION)"
 
 DEBUG=1
-UID=$(shell id -u)
+SET_USER=$(shell (docker --version | grep -q podman) || echo "--user $(shell id -u)")
 PWD=$(shell pwd)
 
 BUILDER_DOCKER_FILE?=traceloop-builder.Dockerfile
@@ -49,7 +49,7 @@ ifeq ($(CIRCLECI),true)
 	docker create -v /src -v /dist --name sources alpine:3.4 /bin/true
 	docker cp . sources:/src
 endif
-	$(SUDO) docker run --user $(UID) -e DEBUG=$(DEBUG) \
+	$(SUDO) docker run $(SET_USER) -e DEBUG=$(DEBUG) \
 		-e CIRCLE_BUILD_URL=$(CIRCLE_BUILD_URL) \
 		$(DOCKER_VOLUMES) \
 		--workdir=/src \
