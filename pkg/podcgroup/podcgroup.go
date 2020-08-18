@@ -41,19 +41,16 @@ func podContainerIDExtractor(cgroupPath string) (podUID, containerID string) {
 	}
 
 	containerRuntime := containerIDMatches[1]
-	if containerRuntime == "" {
-		containerRuntime = "docker"
-	}
 	if containerRuntime == "crio" {
 		containerRuntime = "cri-o"
 	}
-	if containerRuntime != "docker" && containerRuntime != "cri-o" {
+	if containerRuntime != "" && containerRuntime != "docker" && containerRuntime != "cri-o" {
 		return
 	}
 
 	podUID = podIDMatches[1]
 	podUID = strings.Replace(podUID, "_", "-", -1)
-	containerID = containerRuntime + "://" + containerIDMatches[2]
+	containerID = containerIDMatches[2]
 
 	return
 }
