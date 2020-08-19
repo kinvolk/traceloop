@@ -1,0 +1,47 @@
+#!/bin/bash
+set -euo pipefail
+
+if [ "$USER" != "root" ]; then
+  echo "Must run with sudo"
+  exit 1
+fi
+
+killall traceloop || true
+
+RESULTS="results-$(date +%s)"
+mkdir "$RESULTS"
+# sysbench fileio --file-io-mode=MODE:
+# MODE=sync makes a "read" syscall where strace/traceloop copy the buffer,
+# MODE=async makes an "io_submit" syscall where strace/traceloop do not copy the buffer,
+# MODE=mmap makes no syscall
+MODES="sync async mmap"
+
+for MODE in $MODES; do
+  NAME="strace-$MODE"
+  systemd-run --wait --collect --pipe -p PrivateTmp=yes --working-directory="$PWD" strace -f -o "$RESULTS/$MODE.strace" ./testload "$MODE" | tee > "$RESULTS/$NAME"
+done
+
+for MODE in $MODES; do
+  NAME="none-$MODE"
+  systemd-run --wait --collect --pipe -p PrivateTmp=yes --working-directory="$PWD" ./testload "$MODE" | tee > "$RESULTS/$NAME"
+done
+
+rm -f /run/traceloop.socket
+../traceloop serve &
+while ! sudo curl --unix-socket /run/traceloop.socket 'http://localhost/list'; do
+  sleep 1; echo "Waiting for traceloop to start up"
+done
+
+for MODE in $MODES; do
+  NAME="traceloop-active-$MODE"
+  systemd-run --wait --collect --pipe -p PrivateTmp=yes --working-directory="$PWD" -p 'ExecStartPre=/bin/sh -c "curl --unix-socket /run/traceloop.socket \"http://localhost/add?name='"testload-${MODE}"'&cgrouppath=$(./current-cgroup)\""' ./testload "$MODE" | tee > "$RESULTS/$NAME"
+  curl --unix-socket /run/traceloop.socket "http://localhost/dump-by-name?name=testload-${MODE}" > "$RESULTS/$MODE.traceloop"
+done
+
+for MODE in $MODES; do
+  NAME="traceloop-passive-$MODE"
+  systemd-run --wait --collect --pipe -p PrivateTmp=yes --working-directory="$PWD" ./testload "$MODE" | tee > "$RESULTS/$NAME"
+done
+
+killall traceloop
+rm -f /run/traceloop.socket

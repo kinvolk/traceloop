@@ -1,0 +1,12 @@
+#!/bin/bash
+set -euo pipefail
+
+MODE="$1"
+
+cd /tmp
+stat --file-system --format %T /tmp | grep -q tmpfs
+
+sysbench fileio prepare
+taskset -a -c 0 sysbench --threads=1 fileio --file-test-mode=seqrd --file-io-mode="$MODE" run
+
+# not needed because PrivateTmp: sysbench fileio cleanup
