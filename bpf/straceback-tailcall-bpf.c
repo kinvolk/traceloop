@@ -158,9 +158,7 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 
 			if (arg_len == USE_NULL_BYTE_LENGTH) {
 				null_terminated = true;
-				arg_len = PARAM_LEN - 1;
-				/* enforce termination */
-				sc_cont.param[arg_len] = '\0';
+				arg_len = 0;
 			} else if (arg_len >= USE_ARG_INDEX_AS_PARAM_LENGTH) {
 				__u64 idx = arg_len & USE_ARG_INDEX_AS_PARAM_LENGTH_MASK;
 				/* Access args via the previously saved map entry instead of
@@ -192,7 +190,13 @@ int tracepoint__sys_enter(struct sys_enter_args *ctx)
 			// https://github.com/torvalds/linux/commit/9fd29c08e52023252f0480ab8f6906a1ecc9a8d5
 			switch (arg_len) {
 			case 0:
-				// Nothing to do
+				if (null_terminated) {
+					/* enforces zero-termination in sc_cont.param even if the string is larger */
+					if (bpf_probe_read_str(sc_cont.param, PARAM_LEN, (void *)(ctx->args[i])) < 0) {
+						sc_cont.failed = true;
+					}
+				}
+				// Otherwise nothing to do
 				break;
 #define UNROLL_CASE(len) \
 			case (len): \
@@ -282,9 +286,7 @@ int tracepoint__sys_exit(struct sys_exit_args *ctx)
 						arg_len = ctx->ret;
 				} else if (arg_len == USE_NULL_BYTE_LENGTH) {
 					null_terminated = true;
-					arg_len = PARAM_LEN - 1;
-					/* enforce termination */
-					sc_cont.param[arg_len] = '\0';
+					arg_len = 0;
 				} else if (arg_len >= USE_ARG_INDEX_AS_PARAM_LENGTH) {
 					__u64 idx = arg_len & USE_ARG_INDEX_AS_PARAM_LENGTH_MASK;
 					if (idx < 6)
@@ -307,7 +309,13 @@ int tracepoint__sys_exit(struct sys_exit_args *ctx)
 				// I know arg_len is not a volatile but that stops the compiler from
 				// optimising the ifs into one bpf_probe_read call with a variable size.
 				if (arg_len == 0) {
-					// Nothing to do
+					if (null_terminated) {
+						/* enforces zero-termination in sc_cont.param even if the string is larger */
+						if (bpf_probe_read_str(sc_cont.param, PARAM_LEN, (void *)(remembered->args[i])) < 0) {
+							sc_cont.failed = true;
+						}
+					}
+					// Otherwise nothing to do
 				}
 #define UNROLL_TEST(len) \
 				else if ((volatile __u64)arg_len == (len)) { \
