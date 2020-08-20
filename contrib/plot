@@ -1,0 +1,45 @@
+#!/usr/bin/env python3
+import numpy as np
+import pandas as pd
+import matplotlib
+import matplotlib.pyplot as plt
+from pathlib import Path
+import itertools
+
+data = {'Mode': [], 'Tracer': [], 'MiB/s': []}
+
+modes = sorted(['async', 'mmap', 'sync'])
+tracers = sorted(['none', 'traceloop-active', 'traceloop-passive', 'strace'])
+
+runs = list(map(Path.as_posix, Path('.').glob('results-*')))
+N=len(runs)
+for (mode, tracer, run) in itertools.product(modes, tracers, runs):
+  with open(run + '/' + tracer + '-' + mode) as f:
+    line = [line for line in f.read().splitlines() if "read, MiB/s" in line][0]
+    mibps = float(line.split(' ')[-1])
+    data['Mode'].append(mode)
+    data['Tracer'].append(tracer)
+    data['MiB/s'].append(mibps)
+
+df = pd.DataFrame(data)
+
+minmax = []
+# this works because we sorted modes and tracers
+for mode in modes:
+  # use walrus to filter twice
+  distances_to_mins = [(dx := df[df['Tracer']==tracer])[dx['Mode']==mode]['MiB/s'].mean()-(dy := df[df['Tracer']==tracer])[dy['Mode']==mode]['MiB/s'].min() for tracer in tracers]
+  distances_to_maxs = [(dx := df[df['Tracer']==tracer])[dx['Mode']==mode]['MiB/s'].max()-(dy := df[df['Tracer']==tracer])[dy['Mode']==mode]['MiB/s'].mean() for tracer in tracers]
+  minmax.append([distances_to_mins, distances_to_maxs])
+
+fontsize=18
+plt.rc('legend', fontsize=fontsize)
+plt.rc('font', size=fontsize)
+plt.rc('axes', labelsize=fontsize)
+
+df = df.pivot_table(index='Tracer', columns='Mode', values='MiB/s')
+p=df.plot(kind='barh', xerr=minmax, title='sysbench fileio --file-test-mode=seqrd --file-io-mode=(sync|mmap|async), N=' + str(N), figsize=(15, 7), fontsize=fontsize)
+plt.xlabel('MiB/s (mean and min/max bar)')
+handles, labels = p.get_legend_handles_labels()
+p.legend(reversed(handles), reversed(labels), loc='upper left', bbox_to_anchor=(1,1), borderaxespad=0.)
+plt.tight_layout()
+plt.savefig('graph.png') # use PNG because Google Docs can't import SVG
