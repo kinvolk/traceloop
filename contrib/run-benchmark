@@ -18,12 +18,12 @@ MODES="sync async mmap"
 
 for MODE in $MODES; do
   NAME="strace-$MODE"
-  systemd-run --wait --collect --pipe -p PrivateTmp=yes --working-directory="$PWD" strace -f -o "$RESULTS/$MODE.strace" ./testload "$MODE" | tee > "$RESULTS/$NAME"
+  systemd-run --wait --collect --pipe -p PrivateTmp=yes --working-directory="$PWD" strace -f -o "$RESULTS/$MODE.strace" ./testload "$MODE" > "$RESULTS/$NAME"
 done
 
 for MODE in $MODES; do
   NAME="none-$MODE"
-  systemd-run --wait --collect --pipe -p PrivateTmp=yes --working-directory="$PWD" ./testload "$MODE" | tee > "$RESULTS/$NAME"
+  systemd-run --wait --collect --pipe -p PrivateTmp=yes --working-directory="$PWD" ./testload "$MODE" > "$RESULTS/$NAME"
 done
 
 rm -f /run/traceloop.socket
@@ -34,14 +34,14 @@ done
 
 for MODE in $MODES; do
   NAME="traceloop-active-$MODE"
-  systemd-run --wait --collect --pipe -p PrivateTmp=yes --working-directory="$PWD" -p 'ExecStartPre=/bin/sh -c "curl -f --unix-socket /run/traceloop.socket \"http://localhost/add?name='"testload-${MODE}"'&cgrouppath=$(./current-cgroup)\""' ./testload "$MODE" | tee > "$RESULTS/$NAME"
+  systemd-run --wait --collect --pipe -p PrivateTmp=yes --working-directory="$PWD" -p 'ExecStartPre=/bin/sh -c "curl -f --unix-socket /run/traceloop.socket \"http://localhost/add?name='"testload-${MODE}"'&cgrouppath=$(./current-cgroup)\""' ./testload "$MODE" > "$RESULTS/$NAME"
   curl -f --unix-socket /run/traceloop.socket "http://localhost/dump-by-name?name=testload-${MODE}" > "$RESULTS/$MODE.traceloop"
   grep -q "prog with name \"testload-${MODE}\" not found" "$RESULTS/$MODE.traceloop" && { echo "Error: traceloop did register cgroup"; mv "$RESULTS" "failed-$RESULTS"; exit 1 ; }
 done
 
 for MODE in $MODES; do
   NAME="traceloop-passive-$MODE"
-  systemd-run --wait --collect --pipe -p PrivateTmp=yes --working-directory="$PWD" ./testload "$MODE" | tee > "$RESULTS/$NAME"
+  systemd-run --wait --collect --pipe -p PrivateTmp=yes --working-directory="$PWD" ./testload "$MODE" > "$RESULTS/$NAME"
 done
 
 killall traceloop
