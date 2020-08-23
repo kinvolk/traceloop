@@ -36,6 +36,7 @@ for MODE in $MODES; do
   NAME="traceloop-active-$MODE"
   systemd-run --wait --collect --pipe -p PrivateTmp=yes --working-directory="$PWD" -p 'ExecStartPre=/bin/sh -c "curl --unix-socket /run/traceloop.socket \"http://localhost/add?name='"testload-${MODE}"'&cgrouppath=$(./current-cgroup)\""' ./testload "$MODE" | tee > "$RESULTS/$NAME"
   curl --unix-socket /run/traceloop.socket "http://localhost/dump-by-name?name=testload-${MODE}" > "$RESULTS/$MODE.traceloop"
+  grep -q "prog with name \"testload-${MODE}\" not found" "$RESULTS/$MODE.traceloop" && { echo "Error: traceloop did register cgroup"; mv "$RESULTS" "failed-$RESULTS"; exit 1 ; }
 done
 
 for MODE in $MODES; do
