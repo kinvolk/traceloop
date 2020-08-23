@@ -288,5 +288,8 @@ func syscallGetDef(nr int) (args [6]uint64) {
 	if syscallNames[nr] == "getcwd" {
 		return [6]uint64{useNullByteLength | paramProbeAtExitMask, 0, 0, 0, 0, 0}
 	}
+	if syscallNames[nr] == "pread64" {
+		return [6]uint64{0, useRetAsParamLength | paramProbeAtExitMask, 0, 0, 0, 0}
+	}
 	return
 }
