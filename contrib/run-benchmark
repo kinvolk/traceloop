@@ -28,7 +28,7 @@ done
 
 rm -f /run/traceloop.socket
 ../traceloop serve &
-while ! sudo curl --unix-socket /run/traceloop.socket 'http://localhost/list'; do
+while ! curl --unix-socket /run/traceloop.socket 'http://localhost/list'; do
   sleep 1; echo "Waiting for traceloop to start up"
 done
 
