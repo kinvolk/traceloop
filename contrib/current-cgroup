@@ -3,23 +3,29 @@ set -euo pipefail
 
 if [ "$#" -gt 0 ] && { [ "$1" = "-h" ] || [ "$1" = "--help" ] ; }; then
   echo "Helper script to find the current cgroup v2 path"
-  echo "Usage: [PID=PROCESS_ID] $0"
+  echo "Usage: [PID=PROCESS_ID] [WITHPREFIX=0] $0"
   echo "  If PID is specified as environment variable, the cgroup path of"
   echo "  the given PID will be queried. Otherwise the PID of the script"
   echo "  process itself will be used."
+  echo "  If WITHPREFIX is not 1, only the cgroup name is printed."
   exit 1
 fi
 
 PID="${PID:-$$}"
+WITHPREFIX="${WITHPREFIX-1}"
 
-PREFIX="$(mount -l -t cgroup2 | awk '{print $3}')"
-if [ "$PREFIX" = "" ]; then
-  echo "Error: Traceloop doesn't support cgroup v1" > /dev/stderr
-  exit 1
+if [ "${WITHPREFIX}" != 1 ]; then
+  PREFIX=""
+else
+  PREFIX="$(mount -l -t cgroup2 | awk '{print $3}')"
+  if [ "$PREFIX" = "" ]; then
+    echo "Error: Traceloop doesn't support cgroup v1" > /dev/stderr
+    exit 1
+  fi
 fi
 
 CGROUP_PATH="${PREFIX}$(grep '0::' "/proc/${PID}/cgroup" | cut -d : -f 3-)"
-if [ -e "${CGROUP_PATH}" ]; then
+if [ "${WITHPREFIX}" != 1 ] || [ -e "${CGROUP_PATH}" ]; then
   echo "${CGROUP_PATH}"
 else
   echo "Error: Path does not exist" > /dev/stderr

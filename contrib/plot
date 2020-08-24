@@ -9,7 +9,7 @@ import itertools
 data = {'Mode': [], 'Tracer': [], 'MiB/s': []}
 
 modes = sorted(['async', 'mmap', 'sync'])
-tracers = sorted(['none', 'traceloop-active', 'traceloop-passive', 'strace'])
+tracers = sorted(['none', 'traceloop-active', 'traceloop-passive', 'strace', 'perf-trace'])
 
 runs = list(map(Path.as_posix, Path('.').glob('results-*')))
 N=len(runs)
@@ -17,6 +17,8 @@ for (mode, tracer, run) in itertools.product(modes, tracers, runs):
   with open(run + '/' + tracer + '-' + mode) as f:
     line = [line for line in f.read().splitlines() if "read, MiB/s" in line][0]
     mibps = float(line.split(' ')[-1])
+    if mode == 'sync' and tracer == 'perf-trace':
+      mibps = 0  # perf trace does not log the buffer content
     data['Mode'].append(mode)
     data['Tracer'].append(tracer)
     data['MiB/s'].append(mibps)

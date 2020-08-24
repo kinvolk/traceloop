@@ -17,6 +17,11 @@ mkdir "$RESULTS"
 MODES="sync async mmap"
 
 for MODE in $MODES; do
+  NAME="perf-trace-$MODE"
+  systemd-run --wait --collect --pipe -p PrivateTmp=yes --working-directory="$PWD" sh -c "perf trace -o \"$RESULTS/$MODE.perf-trace\" -a -G \"\$(WITHPREFIX=0 ./current-cgroup)\" & while [ ! -e \"$RESULTS/$MODE.perf-trace\" ] || [ \"\$(cat \"$RESULTS/$MODE.perf-trace\" | wc -l)\" = 0 ]; do sleep 1; done; ./testload \"$MODE\" && killall perf" > "$RESULTS/$NAME"
+done
+
+for MODE in $MODES; do
   NAME="strace-$MODE"
   systemd-run --wait --collect --pipe -p PrivateTmp=yes --working-directory="$PWD" strace -f -o "$RESULTS/$MODE.strace" ./testload "$MODE" > "$RESULTS/$NAME"
 done
