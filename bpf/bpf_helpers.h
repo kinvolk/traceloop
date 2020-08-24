@@ -21,6 +21,16 @@ struct bpf_map_def;
 #define BPF_FUNC_probe_read_str 45
 #endif
 
+/* Linux 5.5
+#ifndef BPF_FUNC_probe_read_user
+#define BPF_FUNC_probe_read_user 112
+#endif
+
+#ifndef BPF_FUNC_probe_read_user_str
+#define BPF_FUNC_probe_read_user_str 114
+#endif
+*/
+
 #ifndef BPF_FUNC_map_push_elem
 #define BPF_FUNC_map_push_elem 87
 #endif
@@ -41,6 +51,12 @@ static int (*bpf_probe_read)(void *dst, int size, void *unsafe_ptr) =
 	(void *) BPF_FUNC_probe_read;
 static int (*bpf_probe_read_str)(void *dst, int size, void *unsafe_ptr) =
 	(void *) BPF_FUNC_probe_read_str;
+/* Linux 5.5
+static int (*bpf_probe_read_user)(void *dst, __UINT32_TYPE__ size, void *unsafe_ptr) =
+	(void *) BPF_FUNC_probe_read_user;
+static int (*bpf_probe_read_user_str)(void *dst, int size, void *unsafe_ptr) =
+	(void *) BPF_FUNC_probe_read_user_str;
+*/
 static unsigned long long (*bpf_ktime_get_ns)(void) =
 	(void *) BPF_FUNC_ktime_get_ns;
 static int (*bpf_trace_printk)(const char *fmt, int fmt_size, ...) =
