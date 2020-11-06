@@ -62,3 +62,12 @@ $ sudo curl --unix-socket /run/traceloop.socket 'http://localhost/dump-by-cgroup
 ...
 
 ```
+
+### Talk at Linux Plumbers Conference 2020
+
+A comprehensive presentation was held at LPC 2020 in the Networking and BPF Summit.
+See the slides [here](https://linuxplumbersconf.org/event/7/contributions/667/attachments/510/919/Traceloop_and_BPF_Linux_Plumbers_Conference_-_LPC_2020.pdf).
+
+After feedback to include a comparison to `perf trace` we reran the benchmark but omitted the synchronous write syscall case that logs the buffer contents because dumping the buffers is not implemented in `perf trace`. Here the results:
+
+![benchmark graph](contrib/graph-2020-08-25.png)
