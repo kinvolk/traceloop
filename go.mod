@@ -7,7 +7,7 @@ require (
 	github.com/iovisor/gobpf v0.0.0-20190329163444-e0d8d785d368
 	github.com/sirupsen/logrus v1.6.0
 	github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2
-	golang.org/x/crypto v0.0.0-20191002192127-34f69633bfdc // indirect
+	golang.org/x/crypto v0.0.0-20210506145944-38f3c27a63bf // indirect
 	golang.org/x/time v0.0.0-20190921001708-c4c64cad1fd0 // indirect
 	k8s.io/api v0.17.4
 	k8s.io/apimachinery v0.17.4
