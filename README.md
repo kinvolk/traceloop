@@ -63,6 +63,97 @@ $ sudo curl --unix-socket /run/traceloop.socket 'http://localhost/dump-by-cgroup
 
 ```
 
+## With systemd services using traceloopctl and the HTTP interface to integrate with systemd
+
+The `contrib/traceloopctl` helper is a command line tool to manage traceloop logs and has a special mode for systemd units.
+This works when systemd unit traces have a name that consits of the systemd unit file name combined with the systemd service invocation ID through a `_` character (`%n_$INVOCATION_ID`).
+
+```
+$ contrib/traceloopctl
+Usage: contrib/traceloopctl COMMAND|-h|--help
+Needs to be run with access to /run/traceloop.socket (e.g., with sudo).
+Commands:
+  list-all
+  dump-id ID
+  dump-name NAME
+  close-id ID
+  close-name NAME
+  add-current-cgroup NAME
+
+  list-sd-units
+  list-sd-traces SERVICE
+  dump-sd SERVICE INVOCATION|-1
+  close-sd SERVICE INVOCATION|-1|all
+  add-current-cgroup-sd SERVICE INVOCATION
+
+The *-sd commands assume the trace name format is systemd_UNIT_INVOCATIONID which can be automated with:
+  ExecStartPre=+/…/contrib/traceloopctl add-current-cgroup-sd "%n" "$INVOCATION_ID"
+```
+
+First you need to make sure that traceloop runs as a service:
+
+```
+sudo cp contrib/traceloop.service /etc/systemd/system/traceloop.service
+# You can enable it always or just start it on demand pulled in as dependency: sudo systemctl enable --now traceloop.service
+```
+
+Now add `Requires=traceloop.service` and `After=traceloop.service` directives to the `[Unit]` section of your service.
+In the `[Service]` section you have to add a special command that registers the unit CGroup with traceloop: add `ExecStartPre=+/PATH/TO/kinvolk/traceloop/contrib/traceloopctl add-current-cgroup-sd "%n" "$INVOCATION_ID"` as very first `ExecStartPre` line.
+The `+` prefix means to ignore any `User=` directives but run as root user and also ignore any filesystem changes like `ProtectSystem=`.
+This allows us to use the system's exec path and write to `/run/traceloop.socket` regardless of the restrictions applying for the regular `ExecStartPre=`/`ExecStart=` processes.
+
+An example unit `my-service.service` looks like this:
+
+```
+[Unit]
+Description=My Service
+# Add:
+Requires=traceloop.service
+# Add:
+After=traceloop.service
+
+[Service]
+User=1000
+Group=1000
+ProtectSystem=strict
+NoNewPrivileges=yes
+
+# Add:
+ExecStartPre=+/PATH/TO/kinvolk/traceloop/contrib/traceloopctl add-current-cgroup-sd "%n" "$INVOCATION_ID"
+
+ExecStart=/bin/echo Hello World
+```
+
+Instead of modifying the original `my-service.service` unit file you can also do the traceloop registration through a small drop-in unit file in `/etc/systemd/system/my-service.service.d/10-traceloop.conf`:
+
+```
+[Unit]
+Requires=traceloop.service
+After=traceloop.service
+
+[Service]
+# The + prefix means to ignore the User= but run as root and ignore filesystem changes like ProtectSystem=, this allows us to use the system's curl and write to /run/
+ExecStartPre=+/PATH/TO/kinvolk/traceloop/contrib/traceloopctl add-current-cgroup-sd "%n" "$INVOCATION_ID"
+```
+
+Start the service with `sudo systemctl daemon-reload; sudo systemctl restart my-service.service` and observe the traces:
+
+```
+# List the traced systemd units:
+$ list-sd-units
+ Traces Units
+------- -----
+      1 my-service.service
+# Now list the traces:
+$ contrib/traceloopctl list-sd-traces my-service.service
+a72e5d0f2b7e405894ca4664ddf205b1
+# Dump the trace:
+$ contrib/traceloopctl dump-sd my-service.service -1 | less
+# Clean up afterwards:
+$ contrib/traceloopctl close-sd my-service.service all
+closed
+```
+
 ### Talk at Linux Plumbers Conference 2020
 
 A comprehensive presentation was held at LPC 2020 in the Networking and BPF Summit.

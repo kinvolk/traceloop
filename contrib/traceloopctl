@@ -1,0 +1,131 @@
+#!/bin/sh
+CMD="$1"
+ARG1="$2"
+ARG2="$3"
+set -euo pipefail
+
+if [ $# -lt 1 ] || [ "$CMD" = "-h" ] || [ "$CMD" = "--help" ]; then
+  echo "Usage: $0 COMMAND|-h|--help"
+  echo "Needs to be run with access to /run/traceloop.socket (e.g., with sudo)."
+  echo "Commands:"
+  echo "  list-all"
+  echo "  dump-id ID"
+  echo "  dump-name NAME"
+  echo "  close-id ID"
+  echo "  close-name NAME"
+  echo "  add-current-cgroup NAME"
+  echo
+  echo "  list-sd-units"
+  echo "  list-sd-traces SERVICE"
+  echo "  dump-sd SERVICE INVOCATION|-1"
+  echo "  close-sd SERVICE INVOCATION|-1|all"
+  echo "  add-current-cgroup-sd SERVICE INVOCATION"
+  echo
+  echo "The *-sd commands assume the trace name format is systemd_UNIT_INVOCATIONID which can be automated with:"
+  echo '  ExecStartPre=+/…/contrib/traceloopctl add-current-cgroup-sd "%n" "$INVOCATION_ID"'
+  exit 1
+fi
+
+SCRIPT_FOLDER="$(dirname "$(readlink -f "$0")")"
+CURL="curl -fsS --unix-socket /run/traceloop.socket"
+if [ "$CMD" = list-all ]; then
+  $CURL "http://localhost/list"
+elif [ "$CMD" = dump-id ]; then
+  if [ "$ARG1" = "" ]; then
+    echo "Expected ID argument" > /dev/stderr
+    exit 1
+  fi
+  ID="$ARG1"
+  $CURL "http://localhost/dump?id=${ID}"
+elif [ "$CMD" = dump-name ]; then
+  if [ "$ARG1" = "" ]; then
+    echo "Expected NAME argument" > /dev/stderr
+    exit 1
+  fi
+  NAME="$ARG1"
+  $CURL "http://localhost/dump-by-name?name=${NAME}"
+elif [ "$CMD" = close-id ]; then
+  if [ "$ARG1" = "" ]; then
+    echo "Expected ID argument" > /dev/stderr
+    exit 1
+  fi
+  ID="$ARG1"
+  $CURL "http://localhost/close?id=${ID}"
+elif [ "$CMD" = close-name ]; then
+  if [ "$ARG1" = "" ]; then
+    echo "Expected NAME argument" > /dev/stderr
+    exit 1
+  fi
+  NAME="$ARG1"
+  $CURL "http://localhost/close-by-name?name=${NAME}"
+elif [ "$CMD" = add-current-cgroup ]; then
+    if [ "$ARG1" = "" ]; then
+    echo "Expected NAME argument" > /dev/stderr
+    exit 1
+  fi
+  NAME="$ARG1"
+  CURRENT_CGROUP=$("${SCRIPT_FOLDER}"/current-cgroup)
+  $CURL "http://localhost/add?name=${NAME}&cgrouppath=${CURRENT_CGROUP}"
+elif [ "$CMD" = list-sd-units ]; then
+  echo " Traces Units"
+  echo "------- -----"
+  $CURL "http://localhost/list" | grep -o '\[systemd_.*\]' | cut -d _ -f 2 | sort | uniq -c
+elif [ "$CMD" = list-sd-traces ]; then
+  if [ "$ARG1" = "" ]; then
+    echo "Expected SERVICE argument" > /dev/stderr
+    exit 1
+  fi
+  SERVICE="$ARG1"
+  $CURL "http://localhost/list" | grep -o "\[systemd_${SERVICE}.*\] " | cut -d _ -f 3- | cut -d ] -f 1
+elif [ "$CMD" = dump-sd ]; then
+  if [ "$ARG1" = "" ]; then
+    echo "Expected SERVICE argument" > /dev/stderr
+    exit 1
+  fi
+  SERVICE="$ARG1"
+  if [ "$ARG2" = "" ]; then
+    echo "Expected INVOCATION argument" > /dev/stderr
+    exit 1
+  fi
+  INVOCATION="$ARG2"
+  if [ "$INVOCATION" = "-1" ]; then
+    INVOCATION=$($CURL "http://localhost/list" | grep -o "\[systemd_${SERVICE}.*\] " | cut -d _ -f 3- | cut -d ] -f 1 | tail -n 1)
+  fi
+  $CURL "http://localhost/dump-by-name?name=systemd_${SERVICE}_${INVOCATION}"
+elif [ "$CMD" = close-sd ]; then
+  if [ "$ARG1" = "" ]; then
+    echo "Expected SERVICE argument" > /dev/stderr
+    exit 1
+  fi
+  SERVICE="$ARG1"
+  if [ "$ARG2" = "" ]; then
+    echo "Expected INVOCATION argument" > /dev/stderr
+    exit 1
+  fi
+  if [ "$ARG2" = "-1" ]; then
+    INVOCATIONS=$($CURL "http://localhost/list" | grep -o "\[systemd_${SERVICE}.*\] " | cut -d _ -f 3- | cut -d ] -f 1 | tail -n 1)
+  elif [ "$ARG2" = all ]; then
+    INVOCATIONS=$($CURL "http://localhost/list" | grep -o "\[systemd_${SERVICE}.*\] " | cut -d _ -f 3- | cut -d ] -f 1)
+  else
+    INVOCATIONS="$ARG2"
+  fi
+  for ID in $INVOCATIONS; do
+    $CURL "http://localhost/close-by-name?name=systemd_${SERVICE}_${ID}"
+  done
+elif [ "$CMD" = add-current-cgroup-sd ]; then
+    if [ "$ARG1" = "" ]; then
+    echo "Expected SERVICE argument" > /dev/stderr
+    exit 1
+  fi
+  SERVICE="$ARG1"
+  if [ "$ARG2" = "" ]; then
+    echo "Expected INVOCATION argument" > /dev/stderr
+    exit 1
+  fi
+  INVOCATION="$ARG2"
+  CURRENT_CGROUP=$("${SCRIPT_FOLDER}"/current-cgroup)
+  $CURL "http://localhost/add?name=systemd_${SERVICE}_${INVOCATION}&cgrouppath=${CURRENT_CGROUP}"
+else
+  echo "Unknown command \"$CMD\"" > /dev/stderr
+  exit 1
+fi
