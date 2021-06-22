@@ -1,6 +1,7 @@
 package annotationpublisher
 
 import (
+	"context"
 	"fmt"
 	"os"
 
@@ -52,7 +53,7 @@ func NewAnnotationPublisher() (*AnnotationPublisher, error) {
 
 func (a *AnnotationPublisher) Publish(data string) error {
 	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		pod, err := a.clientset.CoreV1().Pods(a.selfPodNamespace).Get(a.selfPodName, metav1.GetOptions{})
+		pod, err := a.clientset.CoreV1().Pods(a.selfPodNamespace).Get(context.TODO(), a.selfPodName, metav1.GetOptions{})
 		if err != nil {
 			return err
 		}
@@ -62,7 +63,7 @@ func (a *AnnotationPublisher) Publish(data string) error {
 		}
 		pod.ObjectMeta.Annotations["traceloop.kinvolk.io/state"] = data
 
-		_, updateErr := a.clientset.CoreV1().Pods(a.selfPodNamespace).Update(pod)
+		_, updateErr := a.clientset.CoreV1().Pods(a.selfPodNamespace).Update(context.TODO(), pod, metav1.UpdateOptions{})
 		return updateErr
 	})
 	if retryErr != nil {
