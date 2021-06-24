@@ -1,0 +1,12 @@
+[Unit]
+Description=Traceloop
+
+[Service]
+Type=notify
+NotifyAccess=all
+ExecStartPre=/bin/rm -f /run/traceloop.socket
+ExecStart=/bin/sh -c "/home/kai/kinvolk/traceloop/traceloop serve & while ! curl -fsS --unix-socket /run/traceloop.socket 'http://localhost/list' > /dev/null; do sleep 1; echo Waiting for traceloop to start up; done ; systemd-notify --ready; wait"
+ExecStopPost=/bin/rm -f /run/traceloop.socket
+
+[Install]
+WantedBy=multi-user.target
