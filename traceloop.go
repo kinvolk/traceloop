@@ -12,6 +12,7 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 
 	"github.com/kinvolk/traceloop/pkg/straceback"
 )
@@ -27,6 +28,14 @@ var (
 
 // This variable is set during build.
 var version = "undefined"
+
+func increaseRlimit() error {
+	limit := &unix.Rlimit{
+		Cur: unix.RLIM_INFINITY,
+		Max: unix.RLIM_INFINITY,
+	}
+	return unix.Setrlimit(unix.RLIMIT_MEMLOCK, limit)
+}
 
 func main() {
 	flag.StringVar(&logflags, "log", "info", "log level [trace,debug,info,warn,error,fatal,color,nocolor,json]")
@@ -118,6 +127,11 @@ func main() {
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown argument %q.\n", flag.Arg(0))
 		flag.Usage()
+		os.Exit(1)
+	}
+
+	if err := increaseRlimit(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to increase memlock limit: %v\n", err)
 		os.Exit(1)
 	}
 
