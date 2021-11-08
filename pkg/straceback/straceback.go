@@ -1008,4 +1008,7 @@ func (sb *StraceBack) Stop() {
 		}
 	}
 	sb.mainProg.Close()
+	if sb.annotationPublisher != nil {
+		sb.annotationPublisher.Clean()
+	}
 }

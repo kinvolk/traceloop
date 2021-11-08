@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -143,7 +144,8 @@ func main() {
 
 	if withPidNS && !serveHTTP {
 		sig := make(chan os.Signal, 1)
-		signal.Notify(sig, os.Interrupt)
+		signal.Notify(sig, syscall.SIGINT)
+		signal.Notify(sig, syscall.SIGTERM)
 		<-sig
 		fmt.Printf("Interrupted!\n")
 		t.DumpAll()
@@ -284,7 +286,7 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		server.Serve(unixListener)
+		go server.Serve(unixListener)
 	}
 
 	var ids []uint32
@@ -299,7 +301,8 @@ func main() {
 	}
 
 	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt)
+	signal.Notify(sig, syscall.SIGINT)
+	signal.Notify(sig, syscall.SIGTERM)
 
 	ticker := time.Tick(time.Millisecond * 250)
 
