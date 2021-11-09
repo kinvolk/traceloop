@@ -72,3 +72,25 @@ func (a *AnnotationPublisher) Publish(data string) error {
 
 	return nil
 }
+
+func (a *AnnotationPublisher) Clean() error {
+	retryErr := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		pod, err := a.clientset.CoreV1().Pods(a.selfPodNamespace).Get(context.TODO(), a.selfPodName, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+
+		if pod.ObjectMeta.Annotations == nil {
+			return nil
+		}
+		delete(pod.ObjectMeta.Annotations, "traceloop.kinvolk.io/state")
+
+		_, updateErr := a.clientset.CoreV1().Pods(a.selfPodNamespace).Update(context.TODO(), pod, metav1.UpdateOptions{})
+		return updateErr
+	})
+	if retryErr != nil {
+		return retryErr
+	}
+
+	return nil
+}
