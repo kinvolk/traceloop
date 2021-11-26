@@ -27,8 +27,11 @@ DOCKER_BRANCH_IMAGE?=kinvolk/traceloop:$(IMAGE_BRANCH_TAG)
 # If you can use docker without being root, you can do "make SUDO="
 SUDO=$(shell docker info >/dev/null 2>&1 || echo "sudo -E")
 
+GOHOSTOS ?= $(shell go env GOHOSTOS)
+GOHOSTARCH ?= $(shell go env GOHOSTARCH)
+
 .PHONY: all
-all: build-docker-image build-bpf-object install-generated-go bin-traceloop test docker/image
+all: build-docker-image build-bpf-object install-generated-go bin-traceloop-all test docker/image
 
 build-docker-image:
 	$(SUDO) docker build -t $(BUILDER_DOCKER_IMAGE) -f $(BUILDER_DOCKER_FILE) .
@@ -72,11 +75,36 @@ tools/golangci-lint: tools/go.mod tools/go.sum
 		go build -o golangci-lint \
 			github.com/golangci/golangci-lint/cmd/golangci-lint
 
-bin-traceloop:
+BIN_TRACELOOP_TARGETS = \
+	bin-traceloop-linux-amd64 \
+	bin-traceloop-linux-arm64
+
+.PHONY: list-bin-traceloop-targets
+list-bin-traceloop-targets:
+	@echo $(BIN_TRACELOOP_TARGETS)
+
+.PHONY: bin-traceloop-all
+bin-traceloop-all: $(BIN_TRACELOOP_TARGETS)
+
+bin-traceloop: bin-traceloop-$(GOHOSTOS)-$(GOHOSTARCH)
+	mv traceloop-$(GOHOSTOS)-$(GOHOSTARCH) traceloop
+
+bin-traceloop-linux-amd64:
 	@echo "Building version $(VERSION)"
-	GO111MODULE=on go build \
+	export GO111MODULE=on && \
+	export GOOS=$(shell echo $@ |cut -f3 -d-) GOARCH=$(shell echo $@ |cut -f4 -d-) && \
+	go build \
 		-ldflags $(VERSIONLDFLAGS) \
-		-o traceloop traceloop.go
+		-o traceloop-$${GOOS}-$${GOARCH} traceloop.go
+
+bin-traceloop-linux-arm64:
+	@echo "Building version $(VERSION)"
+	export GO111MODULE=on && \
+	export GOOS=$(shell echo $@ | cut -f3 -d-) GOARCH=$(shell echo $@ |cut -f4 -d-) && \
+	export CGO_ENABLED=1 && CC=aarch64-linux-gnu-gcc \
+	go build \
+		-ldflags $(VERSIONLDFLAGS) \
+		-o traceloop-$${GOOS}-$${GOARCH} traceloop.go
 
 .PHONY: test
 test:
