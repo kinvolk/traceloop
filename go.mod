@@ -6,7 +6,8 @@ require (
 	github.com/iovisor/gobpf v0.0.0-20190329163444-e0d8d785d368
 	github.com/sirupsen/logrus v1.6.0
 	github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2
-	golang.org/x/crypto v0.0.0-20210506145944-38f3c27a63bf // indirect
+	golang.org/x/crypto v0.0.0-20220112180741-5e0467b6c7ce // indirect
+	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
 	k8s.io/api v0.20.6
 	k8s.io/apimachinery v0.20.6
 	k8s.io/client-go v0.20.6
