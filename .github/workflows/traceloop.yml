@@ -24,7 +24,7 @@ jobs:
 
     - name: Build container and publish to Registry
       id: publish-registry
-      uses: elgohr/Publish-Docker-Github-Action@2.8
+      uses: elgohr/Publish-Docker-Github-Action@v5
       with:
         name: docker.io/kinvolk/traceloop
         username: ${{ secrets.DOCKER_USERNAME }}
